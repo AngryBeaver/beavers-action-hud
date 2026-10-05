@@ -1,7 +1,7 @@
 {
   "name": "beavers-action-hud",
   "title": "Beaver's Action HUD",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A player HUD for dnd5e: the character stays centered, Foundry's interface makes room for a round minimap, a health globe, spell slot globes, an action bar with attacks, favorites and spells, and chat messages that bubble up and fade.",
   "devDir": "c:\\vtts\\v14.368\\Data\\modules",
   "type": "module",
