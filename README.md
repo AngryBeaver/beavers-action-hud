@@ -2,6 +2,7 @@
 
 A Foundry VTT v14 module for **dnd5e** that replaces Foundry's interface with a HUD.
 The Idea is from oldschool computer games like Diablo: globes, an action bar, a minimap.
+
 <img width="1564" height="899" alt="image" src="https://github.com/user-attachments/assets/ce912f16-c8d4-4663-9d71-674830a5d1a5" />
 
 
