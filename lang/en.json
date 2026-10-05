@@ -1,0 +1,91 @@
+{
+  "BEAVERS_ACTION_HUD": {
+    "button": {
+      "map": "Open the map",
+      "closeMap": "Close map",
+      "journal": "Journals",
+      "chat": "Chat",
+      "dice": "Roll dice",
+      "exit": "Leave the HUD",
+      "restore": "Back to the HUD",
+      "checks": "Abilities, saves and skills",
+      "inventory": "Inventory",
+      "features": "Features",
+      "spells": "Spells",
+      "effects": "Effects",
+      "switch": "click to play another character",
+      "shortRest": "Short rest",
+      "longRest": "Long rest"
+    },
+    "dice": {
+      "normal": "Normal",
+      "advantage": "Advantage",
+      "disadvantage": "Disadvantage",
+      "bonus": "Bonus"
+    },
+    "bar": {
+      "empty": "The bar is empty. Drag spells, items or anything else from the lists below onto it.",
+      "noCharacter": "No character. Ask your gamemaster to assign you one."
+    },
+    "drawer": {
+      "active": "Active",
+      "passive": "Passive",
+      "empty": "Nothing here.",
+      "sheet": "Open in the character sheet",
+      "close": "Close",
+      "inactive": "Inactive"
+    },
+    "keybindings": {
+      "toggleMap": "Open or close the map",
+      "toggleHud": "Leave or enter the HUD",
+      "toggleHudHint": "Switches between the HUD and Foundry's own interface, like the exit button of the HUD."
+    },
+    "settings": {
+      "mode": {
+        "name": "Player HUD",
+        "hint": "Replaces Foundry's interface with the HUD on this device. Automatic shows it to players and not to gamemasters.",
+        "auto": "Automatic (players only)",
+        "on": "On",
+        "off": "Off"
+      },
+      "minimapImage": {
+        "name": "Scene picture on the minimap",
+        "hint": "The minimap is the whole scene with a pin where the character stands. Of the scene's picture it shows only what you have explored (fog of war) or nothing. A gamemaster can also pick the full map.",
+        "explored": "Explored parts only (fog of war)",
+        "nothing": "Nothing, only the pin",
+        "fullmap": "Full map, also what was never seen"
+      },
+      "toastSeconds": {
+        "name": "Chat message time",
+        "hint": "Seconds a new chat message stays in the corner before it fades."
+      },
+      "chat": {
+        "name": "Chat button",
+        "hint": "A button in the HUD that shows Foundry's chat for writing. Without it new messages still bubble up, and dice are rolled with the dice button."
+      }
+    },
+    "checks": {
+      "abilities": "Ability checks",
+      "saves": "Saving throws",
+      "skills": "Skills",
+      "save": "save"
+    },
+    "stats": {
+      "ac": "Armor class",
+      "initiative": "Roll initiative",
+      "speed": "Speed",
+      "hitDice": "Hit dice",
+      "deathSave": "Dying: click to roll a death saving throw"
+    },
+    "journal": {
+      "notes": "My notes",
+      "createNotes": "Start my notes",
+      "noGm": "Your notes are created by the gamemaster's client, and no gamemaster is online right now."
+    },
+    "combat": {
+      "round": "Round {round}",
+      "unseen": "You do not see {name} on the map.",
+      "endTurn": "End turn"
+    }
+  }
+}

@@ -1,0 +1,1355 @@
+/* Foundry's interface makes room for the HUD. Hidden, not removed: its layout (and what measures it) stays intact.
+   With the map open everything is back; the chat button brings the sidebar alone. */
+body.bah-hud:not(.bah-map) #ui-left,
+body.bah-hud:not(.bah-map) #ui-middle,
+body.bah-hud:not(.bah-map) #ui-right-column-1,
+body.bah-hud:not(.bah-map) #chat-notifications,
+body.bah-hud:not(.bah-map):not(.bah-chat) #sidebar {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+#beavers-action-hud {
+  --bah-gold: #c9a25a;
+  --bah-gold-dim: #7a6030;
+  --bah-stone: #1b1712;
+  --bah-stone-light: #2c251c;
+  --bah-text: #efe6d2;
+  position: fixed;
+  inset: 0;
+  /* above Foundry's interface, below its windows: sheets and dialogs open over the HUD */
+  z-index: 50;
+  pointer-events: none;
+  color: var(--bah-text);
+  font-family: var(--font-primary, "Signika", sans-serif);
+}
+
+#beavers-action-hud button {
+  width: auto;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* ---------- minimap ---------- */
+
+#beavers-action-hud .bah-minimap {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 4px solid var(--bah-gold);
+  outline: 2px solid #000;
+  box-shadow:
+    0 0 0 6px var(--bah-stone),
+    0 0 0 8px var(--bah-gold-dim),
+    0 6px 18px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+#beavers-action-hud .bah-minimap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#beavers-action-hud .bah-minimap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+}
+
+/* ---------- chat messages ---------- */
+
+#beavers-action-hud .bah-toasts {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 320px;
+  height: auto;
+  max-height: 70vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: visible;
+  background: none;
+  list-style: none;
+}
+
+/* the sidebar takes that corner while it is open */
+body.bah-chat #beavers-action-hud .bah-toasts,
+body.bah-map #beavers-action-hud .bah-toasts {
+  display: none;
+}
+
+#beavers-action-hud .bah-toast {
+  max-height: 22vh;
+  overflow: hidden auto;
+  border: 1px solid var(--bah-gold-dim);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7);
+  pointer-events: auto;
+  opacity: 1;
+  transition: opacity 2s ease;
+  animation: bah-toast-in 0.25s ease-out;
+}
+
+#beavers-action-hud .bah-toast.bah-fading {
+  opacity: 0;
+}
+
+#beavers-action-hud .bah-toast > .chat-message {
+  margin: 0;
+  list-style: none;
+}
+
+@keyframes bah-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+}
+
+/* ---------- bottom: slot globes, bar, health globe ---------- */
+
+#beavers-action-hud .bah-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 0 16px;
+}
+
+body.bah-map #beavers-action-hud .bah-bottom,
+body.bah-map #beavers-action-hud .bah-minimap {
+  display: none;
+}
+
+/* room for the sidebar, so it does not cover the health globe */
+body.bah-chat #beavers-action-hud .bah-bottom {
+  right: var(--sidebar-width, 348px);
+}
+
+#beavers-action-hud .bah-center {
+  min-width: 0;
+  max-width: min(760px, 60vw);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+#beavers-action-hud .bah-bar,
+#beavers-action-hud .bah-drawer {
+  background: linear-gradient(var(--bah-stone-light), var(--bah-stone));
+  border: 2px solid var(--bah-gold-dim);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 0 1px #000,
+    0 6px 18px rgba(0, 0, 0, 0.8);
+  pointer-events: auto;
+}
+
+#beavers-action-hud .bah-bar {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#beavers-action-hud .bah-actions,
+#beavers-action-hud .bah-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+}
+
+#beavers-action-hud .bah-divider {
+  width: 2px;
+  height: 40px;
+  margin: 0 3px;
+  background: var(--bah-gold-dim);
+}
+
+#beavers-action-hud .bah-empty {
+  margin: 4px 8px;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+#beavers-action-hud .bah-action {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  flex: none;
+  background: #000;
+  border: 2px solid var(--bah-gold-dim);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+#beavers-action-hud .bah-action:hover,
+#beavers-action-hud .bah-tab:hover,
+#beavers-action-hud .bah-tab.active {
+  border-color: var(--bah-gold);
+  box-shadow: 0 0 8px var(--bah-gold);
+}
+
+#beavers-action-hud .bah-action img {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+}
+
+#beavers-action-hud .bah-dimmed img {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+#beavers-action-hud .bah-action .bah-badge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 1px 3px;
+  font-size: 11px;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.8);
+  border-top-left-radius: 4px;
+}
+
+#beavers-action-hud .bah-tab {
+  width: 34px;
+  height: 30px;
+  flex: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 15px;
+  background: #0d0b08;
+  border: 1px solid var(--bah-gold-dim);
+  border-radius: 4px;
+}
+
+/* dnd5e's tab pictures are dark, drawn for its light sheet */
+#beavers-action-hud .bah-tab img {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  filter: invert(1) brightness(0.9);
+}
+
+/* ---------- drawer ---------- */
+
+#beavers-action-hud .bah-drawer {
+  max-height: 46vh;
+  display: flex;
+  flex-direction: column;
+  animation: bah-drawer-in 0.18s ease-out;
+}
+
+@keyframes bah-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+}
+
+#beavers-action-hud .bah-drawer header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--bah-gold-dim);
+}
+
+#beavers-action-hud .bah-drawer h3 {
+  flex: 1;
+  margin: 0;
+  border: 0;
+  font-size: 16px;
+  color: var(--bah-gold);
+}
+
+#beavers-action-hud .bah-drawer header button {
+  background: none;
+  border: 0;
+  font-size: 15px;
+  opacity: 0.75;
+}
+
+#beavers-action-hud .bah-drawer header button:hover {
+  opacity: 1;
+  color: var(--bah-gold);
+}
+
+#beavers-action-hud .bah-drawer-body {
+  padding: 4px 10px 10px;
+  overflow-y: auto;
+}
+
+#beavers-action-hud .bah-drawer h4 {
+  margin: 8px 0 4px;
+  border: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--bah-gold);
+}
+
+#beavers-action-hud .bah-note {
+  margin-left: 8px;
+  color: var(--bah-text);
+  opacity: 0.8;
+}
+
+#beavers-action-hud .bah-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 4px;
+}
+
+#beavers-action-hud .bah-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px 3px 3px;
+  text-align: left;
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+#beavers-action-hud .bah-row:hover {
+  border-color: var(--bah-gold);
+}
+
+#beavers-action-hud .bah-row img {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 1px solid var(--bah-gold-dim);
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+#beavers-action-hud .bah-row .bah-name {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#beavers-action-hud .bah-row .bah-badge {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* ---------- globes ---------- */
+
+#beavers-action-hud .bah-slots {
+  flex: 1 1 0;
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+#beavers-action-hud .bah-right {
+  flex: 1 1 0;
+  display: flex;
+  align-items: flex-end;
+}
+
+#beavers-action-hud .bah-globe {
+  --bah-liquid: #b3140f;
+  --bah-liquid-dark: #4a0504;
+  position: relative;
+  flex: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #2a2420, #050404 75%);
+  border: 3px solid var(--bah-gold);
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 0 5px var(--bah-stone),
+    0 0 0 6px var(--bah-gold-dim),
+    0 6px 16px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+#beavers-action-hud .bah-liquid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to right, var(--bah-liquid-dark), var(--bah-liquid) 45%, var(--bah-liquid-dark));
+  border-top: 2px solid color-mix(in srgb, var(--bah-liquid) 60%, #fff);
+  transition: height 0.6s ease;
+}
+
+/* the glass */
+#beavers-action-hud .bah-globe::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.45), transparent 32%);
+  box-shadow: inset 0 -8px 18px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+}
+
+#beavers-action-hud .bah-globe-text,
+#beavers-action-hud .bah-globe-level {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  text-align: center;
+  font-weight: bold;
+  text-shadow:
+    0 0 3px #000,
+    0 0 3px #000,
+    0 1px 2px #000;
+}
+
+#beavers-action-hud .bah-health {
+  width: 130px;
+  height: 130px;
+  cursor: pointer;
+}
+
+#beavers-action-hud .bah-health .bah-globe-text {
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 30px;
+  line-height: 1;
+}
+
+#beavers-action-hud .bah-health small {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: normal;
+}
+
+/* temporary hit points: a blue shimmer around the globe and their amount below the hit points */
+#beavers-action-hud .bah-health.bah-temp {
+  border-color: #7fc4ff;
+}
+
+#beavers-action-hud .bah-health .bah-globe-level {
+  bottom: 12px;
+  font-size: 13px;
+  color: #a9d8ff;
+}
+
+#beavers-action-hud .bah-slot {
+  --bah-liquid: #1f5fd0;
+  --bah-liquid-dark: #071a47;
+  width: 54px;
+  height: 54px;
+}
+
+#beavers-action-hud .bah-slot.bah-pact {
+  --bah-liquid: #8a2fc9;
+  --bah-liquid-dark: #2a0a45;
+}
+
+#beavers-action-hud .bah-slot .bah-globe-text {
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  line-height: 1;
+}
+
+#beavers-action-hud .bah-slot .bah-globe-level {
+  bottom: 3px;
+  font-size: 10px;
+  color: var(--bah-gold);
+}
+
+/* ---------- map open: Foundry as usual, in a frame ---------- */
+
+#beavers-action-hud .bah-frame {
+  display: none;
+  position: absolute;
+  inset: 0;
+  border: 10px solid var(--bah-stone);
+  outline: 2px solid var(--bah-gold);
+  outline-offset: -12px;
+  box-shadow:
+    inset 0 0 0 4px var(--bah-gold-dim),
+    inset 0 0 40px rgba(0, 0, 0, 0.7);
+}
+
+body.bah-map #beavers-action-hud .bah-frame {
+  display: block;
+}
+
+#beavers-action-hud .bah-frame button {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 7px 18px;
+  font-size: 14px;
+  background: var(--bah-stone);
+  border: 2px solid var(--bah-gold);
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  pointer-events: auto;
+}
+
+#beavers-action-hud .bah-frame button:hover {
+  color: var(--bah-gold);
+}
+
+/* ---------- quick dice ---------- */
+
+#beavers-action-hud .bah-dice-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+#beavers-action-hud .bah-modes {
+  display: flex;
+}
+
+#beavers-action-hud .bah-mode,
+#beavers-action-hud .bah-bonus button {
+  padding: 6px 10px;
+  font-size: 13px;
+  background: #0d0b08;
+  border: 1px solid var(--bah-gold-dim);
+}
+
+#beavers-action-hud .bah-mode:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+#beavers-action-hud .bah-mode:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+#beavers-action-hud .bah-mode.active {
+  color: #000;
+  background: var(--bah-gold);
+  border-color: var(--bah-gold);
+}
+
+#beavers-action-hud .bah-bonus {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+#beavers-action-hud .bah-bonus input {
+  width: 52px;
+  height: 28px;
+  text-align: center;
+  color: var(--bah-text);
+  background: #000;
+  border: 1px solid var(--bah-gold-dim);
+}
+
+#beavers-action-hud .bah-dice {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+#beavers-action-hud .bah-die {
+  width: 62px;
+  height: 52px;
+  font-size: 17px;
+  font-weight: bold;
+  background: radial-gradient(circle at 50% 30%, #4a3a22, #0d0b08);
+  border: 2px solid var(--bah-gold-dim);
+  border-radius: 8px;
+}
+
+#beavers-action-hud .bah-die:hover {
+  color: var(--bah-gold);
+  border-color: var(--bah-gold);
+  box-shadow: 0 0 8px var(--bah-gold);
+}
+
+/* ---------- the way back after leaving the HUD ---------- */
+
+#beavers-action-hud-restore {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 50;
+  width: auto;
+  height: auto;
+  padding: 5px 14px;
+  font-size: 13px;
+  color: #efe6d2;
+  background: #1b1712;
+  border: 2px solid #c9a25a;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+#beavers-action-hud-restore:hover {
+  opacity: 1;
+}
+
+/* ---------- left of the bar: who the HUD is for, then the spell slots ---------- */
+
+#beavers-action-hud .bah-left {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+#beavers-action-hud .bah-slots {
+  flex: 0 1 auto;
+  max-width: 280px;
+}
+
+#beavers-action-hud .bah-plate {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  background: linear-gradient(var(--bah-stone-light), var(--bah-stone));
+  border: 2px solid var(--bah-gold-dim);
+  border-radius: 40px 10px 10px 40px;
+  box-shadow:
+    inset 0 0 0 1px #000,
+    0 6px 18px rgba(0, 0, 0, 0.8);
+  pointer-events: auto;
+}
+
+#beavers-action-hud .bah-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid var(--bah-gold);
+  outline: 1px solid #000;
+  object-fit: cover;
+  object-position: top;
+  background: #000;
+  cursor: pointer;
+}
+
+#beavers-action-hud .bah-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+#beavers-action-hud .bah-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+#beavers-action-hud .bah-stat i {
+  width: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--bah-gold);
+}
+
+#beavers-action-hud .bah-stat[data-action] {
+  cursor: pointer;
+}
+
+#beavers-action-hud .bah-stat[data-action]:hover {
+  color: var(--bah-gold);
+}
+
+/* ---------- slot globes: slots left / slots, a click lists what they cast ---------- */
+
+#beavers-action-hud .bah-slot {
+  width: 60px;
+  height: 60px;
+  cursor: pointer;
+}
+
+#beavers-action-hud .bah-slot:hover,
+#beavers-action-hud .bah-slot.active {
+  border-color: #fff;
+}
+
+#beavers-action-hud .bah-slot .bah-globe-text {
+  top: 44%;
+  font-size: 19px;
+}
+
+#beavers-action-hud .bah-slot .bah-globe-text small {
+  font-size: 12px;
+  font-weight: normal;
+}
+
+#beavers-action-hud .bah-slot .bah-globe-level {
+  bottom: 4px;
+  font-size: 11px;
+}
+
+/* ---------- hit dice: a ring of segments around the health globe ---------- */
+
+#beavers-action-hud .bah-hd {
+  flex: none;
+  padding: 9px;
+  border-radius: 50%;
+  background:
+    repeating-conic-gradient(#000 0deg 3deg, transparent 3deg var(--bah-hd-step, 360deg)),
+    conic-gradient(#e0b65a var(--bah-hd, 0deg), #3a3128 0deg);
+  box-shadow:
+    0 0 0 2px #000,
+    0 6px 16px rgba(0, 0, 0, 0.8);
+  pointer-events: auto;
+}
+
+#beavers-action-hud .bah-hd.bah-no-hd {
+  background: none;
+  box-shadow: none;
+}
+
+#beavers-action-hud .bah-hd:not(.bah-no-hd) .bah-health {
+  box-shadow: 0 0 0 2px #000;
+}
+
+/* dnd5e's dark pictures on the dark drawer */
+#beavers-action-hud .bah-row img.bah-dark {
+  padding: 3px;
+  filter: invert(1);
+  border-color: #856fcf;
+}
+
+/* ---------- always reachable: the way out of the map, and back into the HUD ---------- */
+
+/* over Foundry's interface and its windows, which are back while the map is open */
+body.bah-map #beavers-action-hud {
+  z-index: 9000;
+}
+
+#beavers-action-hud .bah-frame button,
+#beavers-action-hud-restore {
+  top: 0;
+  bottom: auto;
+  padding: 9px 22px;
+  font-size: 15px;
+  font-weight: bold;
+  color: #000;
+  background: #c9a25a;
+  border: 2px solid #000;
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.8);
+  opacity: 1;
+}
+
+#beavers-action-hud .bah-frame button:hover,
+#beavers-action-hud-restore:hover {
+  color: #000;
+  background: #ecc777;
+}
+
+#beavers-action-hud-restore {
+  z-index: 9000;
+}
+
+/* ---------- top right: the chat messages, below them the description of what the pointer rests on ---------- */
+
+#beavers-action-hud .bah-side {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 320px;
+  max-height: calc(100vh - 220px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+body.bah-chat #beavers-action-hud .bah-side,
+body.bah-map #beavers-action-hud .bah-side {
+  display: none;
+}
+
+#beavers-action-hud .bah-side .bah-toasts {
+  position: static;
+  width: auto;
+  flex: none;
+}
+
+#beavers-action-hud .bah-info {
+  min-height: 0;
+  padding: 8px 12px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.4;
+  background: linear-gradient(var(--bah-stone-light), var(--bah-stone));
+  border: 2px solid var(--bah-gold-dim);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 0 1px #000,
+    0 4px 14px rgba(0, 0, 0, 0.7);
+  pointer-events: auto;
+  opacity: 1;
+  transition: opacity 2s ease;
+}
+
+#beavers-action-hud .bah-info:empty {
+  display: none;
+}
+
+#beavers-action-hud .bah-info.bah-fading {
+  opacity: 0;
+}
+
+#beavers-action-hud .bah-info h4 {
+  margin: 0 0 6px;
+  padding-bottom: 4px;
+  border: 0;
+  border-bottom: 1px solid var(--bah-gold-dim);
+  font-size: 15px;
+  color: var(--bah-gold);
+}
+
+#beavers-action-hud .bah-info-text > :first-child {
+  margin-top: 0;
+}
+
+#beavers-action-hud .bah-info-text > :last-child {
+  margin-bottom: 0;
+}
+
+#beavers-action-hud .bah-info a {
+  color: var(--bah-gold);
+}
+
+/* ---------- the bar takes what is dragged onto it ---------- */
+
+#beavers-action-hud .bah-actions {
+  min-height: 50px;
+}
+
+#beavers-action-hud .bah-action,
+#beavers-action-hud .bah-row[draggable] {
+  cursor: grab;
+}
+
+/* ---------- combat tracker, top middle ---------- */
+
+#beavers-action-hud .bah-combat {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  /* between the minimap and the chat messages */
+  max-width: calc(100vw - 760px);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 4px 12px;
+  overflow: hidden;
+}
+
+#beavers-action-hud .bah-combat:empty,
+body.bah-map #beavers-action-hud .bah-combat {
+  display: none;
+}
+
+#beavers-action-hud .bah-round {
+  align-self: center;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: bold;
+  white-space: nowrap;
+  color: var(--bah-gold);
+  background: var(--bah-stone);
+  border: 1px solid var(--bah-gold-dim);
+  border-radius: 12px;
+  pointer-events: auto;
+}
+
+#beavers-action-hud .bah-combatant {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  flex: none;
+  background: #000;
+  border: 2px solid var(--bah-gold-dim);
+  border-radius: 50%;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
+  pointer-events: auto;
+}
+
+#beavers-action-hud .bah-combatant img {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top;
+}
+
+#beavers-action-hud .bah-combatant.bah-own {
+  border-color: #5fb4ff;
+}
+
+/* whose turn it is */
+#beavers-action-hud .bah-combatant.active {
+  width: 68px;
+  height: 68px;
+  border: 3px solid var(--bah-gold);
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 16px 4px var(--bah-gold);
+}
+
+#beavers-action-hud .bah-combatant:hover {
+  border-color: #fff;
+}
+
+#beavers-action-hud .bah-defeated img {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+#beavers-action-hud .bah-init {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  transform: translateX(-50%);
+  min-width: 18px;
+  padding: 1px 4px;
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
+  background: var(--bah-stone);
+  border: 1px solid var(--bah-gold-dim);
+  border-radius: 8px;
+}
+
+#beavers-action-hud .bah-target {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  padding: 3px;
+  font-size: 13px;
+  color: #fff;
+  background: #c8201a;
+  border: 1px solid #000;
+  border-radius: 50%;
+}
+
+/* ---------- the user's other characters, above the portrait ---------- */
+
+#beavers-action-hud .bah-plate {
+  position: relative;
+}
+
+#beavers-action-hud .bah-avatar[data-action="avatar"]:hover {
+  border-color: #fff;
+}
+
+#beavers-action-hud .bah-picker {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  min-width: 100%;
+  max-height: 50vh;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  overflow-y: auto;
+  background: linear-gradient(var(--bah-stone-light), var(--bah-stone));
+  border: 2px solid var(--bah-gold-dim);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.8);
+}
+
+#beavers-action-hud .bah-picker button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px 3px 3px;
+  font-size: 13px;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid transparent;
+  border-radius: 20px;
+}
+
+#beavers-action-hud .bah-picker button:hover {
+  border-color: var(--bah-gold);
+}
+
+#beavers-action-hud .bah-picker img {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--bah-gold-dim);
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top;
+}
+
+/* "1/4 +7" has to fit on a bar button */
+#beavers-action-hud .bah-action .bah-badge {
+  max-width: 100%;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+/* Foundry's popped out combat tracker (opened by Foundry or another module) would lie over the HUD, which has its
+   own tracker. With the map open it is back. */
+body.bah-hud:not(.bah-map) #combat-popout {
+  display: none !important;
+}
+
+#beavers-action-hud .bah-end-turn {
+  align-self: center;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: bold;
+  white-space: nowrap;
+  color: #000;
+  background: var(--bah-gold);
+  border: 2px solid #000;
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
+  pointer-events: auto;
+}
+
+#beavers-action-hud .bah-end-turn:hover {
+  background: #ecc777;
+}
+
+/* ---------- the portrait beside the bar, as high as the bar ---------- */
+
+#beavers-action-hud .bah-center {
+  max-width: min(900px, 64vw);
+}
+
+#beavers-action-hud .bah-barrow {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+#beavers-action-hud .bah-barrow .bah-bar {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#beavers-action-hud .bah-plate {
+  align-items: stretch;
+  gap: 10px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 8px;
+}
+
+/* as wide as the bar is high; the picture fills it and adds no height of its own */
+#beavers-action-hud .bah-avatar-box {
+  position: relative;
+  flex: none;
+  align-self: stretch;
+  aspect-ratio: 1;
+  min-width: 64px;
+}
+
+#beavers-action-hud .bah-avatar {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-width: 2px;
+  border-radius: 6px;
+}
+
+#beavers-action-hud .bah-stats {
+  justify-content: center;
+}
+
+/* ---------- dying: the death saves in the health globe ---------- */
+
+#beavers-action-hud .bah-dying {
+  border-color: #8d8d8d;
+  background: radial-gradient(circle at 50% 40%, #3a1414, #050404 75%);
+  animation: bah-dying 1.6s ease-in-out infinite;
+}
+
+@keyframes bah-dying {
+  50% {
+    box-shadow:
+      0 0 0 2px #000,
+      0 0 18px 4px #c8201a;
+  }
+}
+
+#beavers-action-hud .bah-dying .bah-globe-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  font-size: 26px;
+}
+
+#beavers-action-hud .bah-pips {
+  display: flex;
+  gap: 6px;
+}
+
+#beavers-action-hud .bah-pips i {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #cfcfcf;
+  border-radius: 50%;
+  background: #000;
+}
+
+#beavers-action-hud .bah-pips i.bah-success {
+  background: #58c95a;
+  border-color: #c9f5ca;
+}
+
+#beavers-action-hud .bah-pips i.bah-failure {
+  background: #e5463c;
+  border-color: #ffc9c5;
+}
+
+/* A fixed width: one derived from the bar's height is not known when the row is laid out, and the stats would run
+   into the bar. */
+#beavers-action-hud .bah-avatar-box {
+  aspect-ratio: auto;
+  width: 92px;
+}
+
+/* ---------- the portrait is round again; beside it armor class and speed, below them initiative and the rests ---------- */
+
+#beavers-action-hud .bah-plate {
+  align-items: center;
+  padding: 4px 10px 4px 6px;
+}
+
+#beavers-action-hud .bah-avatar-box {
+  align-self: center;
+  width: 92px;
+  height: 92px;
+}
+
+#beavers-action-hud .bah-avatar {
+  border-width: 3px;
+  border-radius: 50%;
+}
+
+#beavers-action-hud .bah-plate-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#beavers-action-hud .bah-plate .bah-stats {
+  flex-direction: row;
+  gap: 12px;
+}
+
+#beavers-action-hud .bah-plate-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+#beavers-action-hud .bah-plate-buttons button {
+  min-width: 34px;
+  height: 30px;
+  padding: 0 7px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: bold;
+  white-space: nowrap;
+  background: #0d0b08;
+  border: 1px solid var(--bah-gold-dim);
+  border-radius: 4px;
+}
+
+#beavers-action-hud .bah-plate-buttons button:hover {
+  border-color: var(--bah-gold);
+  box-shadow: 0 0 8px var(--bah-gold);
+}
+
+#beavers-action-hud .bah-plate-buttons i {
+  color: var(--bah-gold);
+}
+
+/* ---------- one mana globe, the ring around it are the slot levels ---------- */
+
+#beavers-action-hud .bah-slots {
+  max-width: none;
+}
+
+#beavers-action-hud .bah-mana {
+  position: relative;
+  width: 148px;
+  height: 148px;
+  flex: none;
+}
+
+#beavers-action-hud .bah-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8));
+}
+
+#beavers-action-hud .bah-seg {
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+#beavers-action-hud .bah-seg path {
+  fill: none;
+  stroke-width: 15;
+}
+
+#beavers-action-hud .bah-seg-track {
+  stroke: #1c1a26;
+  outline: none;
+}
+
+#beavers-action-hud .bah-seg-fill {
+  stroke: #2f6fe0;
+}
+
+#beavers-action-hud .bah-seg.bah-pact .bah-seg-fill {
+  stroke: #8a2fc9;
+}
+
+/* the picked level */
+#beavers-action-hud .bah-seg.active .bah-seg-track {
+  stroke: #4a4560;
+}
+
+#beavers-action-hud .bah-seg.active .bah-seg-fill {
+  stroke: #6fa8ff;
+}
+
+#beavers-action-hud .bah-seg.active.bah-pact .bah-seg-fill {
+  stroke: #c07cf0;
+}
+
+#beavers-action-hud .bah-seg:hover .bah-seg-track {
+  stroke: #5c5778;
+}
+
+#beavers-action-hud .bah-seg text {
+  fill: #fff;
+  font-size: 11px;
+  font-weight: bold;
+  text-anchor: middle;
+  dominant-baseline: central;
+  paint-order: stroke;
+  stroke: #000;
+  stroke-width: 3px;
+  pointer-events: none;
+}
+
+#beavers-action-hud .bah-seg.active text {
+  fill: var(--bah-gold);
+  font-size: 13px;
+}
+
+#beavers-action-hud .bah-mana .bah-slot {
+  position: absolute;
+  inset: 24px;
+  width: auto;
+  height: auto;
+  box-shadow: 0 0 0 2px #000;
+}
+
+#beavers-action-hud .bah-mana .bah-slot .bah-globe-text {
+  top: 54%;
+  font-size: 26px;
+}
+
+#beavers-action-hud .bah-mana .bah-slot .bah-globe-text small {
+  font-size: 14px;
+}
+
+#beavers-action-hud .bah-mana .bah-slot .bah-globe-level {
+  bottom: 7px;
+  font-size: 11px;
+}
+
+#beavers-action-hud .bah-globe-plus {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  text-align: center;
+  font-size: 15px;
+  font-weight: bold;
+  color: #d59bff;
+  text-shadow:
+    0 0 3px #000,
+    0 0 3px #000,
+    0 1px 2px #000;
+}
+
+/* ---------- purple on top of the blue are the higher slots ---------- */
+
+#beavers-action-hud .bah-liquid-extra {
+  --bah-liquid: #8a2fc9;
+  --bah-liquid-dark: #2a0a45;
+}
+
+/* the picked level: a light border around its segment */
+#beavers-action-hud .bah-seg path.bah-seg-border {
+  stroke: #f3ecff;
+  stroke-width: 20;
+}
+
+/* the plate itself is round on the left, around the round portrait */
+#beavers-action-hud .bah-plate {
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px 8px 8px 999px;
+}
