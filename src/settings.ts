@@ -5,12 +5,23 @@ export const S = {
   MINIMAP_IMAGE: "minimapImage",
   TOAST_SECONDS: "toastSeconds",
   CHAT: "chat",
+  CHAT_INPUT: "chatInput",
+  TEAM_SIGHT_ALLOWED: "teamSightAllowed",
+  TEAM_SIGHT: "teamSight",
 } as const;
 
 /** Fired on this client when a setting changed that decides whether or how the HUD shows. */
 export const HOOK_SETTINGS = `${MODULE_ID}.settings`;
 
 const changed = () => Hooks.callAll(HOOK_SETTINGS);
+
+/** Fired on this client when who sees for the user changed: team sight was switched, or is no longer allowed. */
+export const HOOK_SIGHT = `${MODULE_ID}.sight`;
+
+const sightChanged = () => {
+  Hooks.callAll(HOOK_SIGHT);
+  changed();
+};
 
 /** Whether this user is a GM. Settings register at init, before `game.user` exists, so this reads the world data. */
 export const isGM = (): boolean => {
@@ -66,6 +77,33 @@ export function registerSettings() {
     type: Boolean,
     default: true,
     onChange: changed,
+  });
+  game.settings.register(MODULE_ID, S.CHAT_INPUT, {
+    name: "BEAVERS_ACTION_HUD.settings.chatInput.name",
+    hint: "BEAVERS_ACTION_HUD.settings.chatInput.hint",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: false,
+    onChange: changed,
+  });
+  game.settings.register(MODULE_ID, S.TEAM_SIGHT_ALLOWED, {
+    name: "BEAVERS_ACTION_HUD.settings.teamSightAllowed.name",
+    hint: "BEAVERS_ACTION_HUD.settings.teamSightAllowed.hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: sightChanged,
+  });
+  game.settings.register(MODULE_ID, S.TEAM_SIGHT, {
+    name: "BEAVERS_ACTION_HUD.settings.teamSight.name",
+    hint: "BEAVERS_ACTION_HUD.settings.teamSight.hint",
+    scope: "client",
+    config: !isGM(),
+    type: Boolean,
+    default: true,
+    onChange: sightChanged,
   });
 }
 

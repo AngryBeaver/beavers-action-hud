@@ -1,12 +1,33 @@
 // What the HUD shows of a dnd5e character: read here, drawn in hud.ts.
 
-import { MODULE_ID, placeInBar, spellSlotBadge, type BarRef } from "./core/model.js";
+import { esc, MODULE_ID, placeInBar, slotGlobes, spellSlotBadge, type BarRef } from "./core/model.js";
 import { notesOf, openNotes } from "./notes.js";
+
+/** A small fact on a drawer row or beside a group's label: an icon, with a text or alone. */
+export interface Tag {
+  icon: string;
+  /** A picture after the text, drawn in the color of the icon: dnd5e's sign of a kind of damage. */
+  img?: string;
+  text?: string;
+  tooltip?: string;
+}
+
+/** What using an entry costs in a turn, if not an action: its border has another colour. */
+export type Kind = "bonus" | "reaction";
 
 /** One button or drawer row. */
 export interface Entry {
   name: string;
   img: string;
+  kind?: Kind;
+  /** Facts below the name of a drawer row. A row with tags, also none, is a high one. */
+  tags?: Tag[];
+  /** Takes what the entry stands for off the character: its row has an x for that. */
+  remove?: () => unknown;
+  /** A switch at the end of its row, grey while off: the shield of what can be equipped. */
+  toggle?: { icon: string; on: boolean; tooltip: string; run: () => unknown };
+  /** What kind of thing it is, at the end of its description's head: the school of a spell. */
+  mark?: { img: string; label: string };
   /** Small text on the icon: remaining uses or the quantity. */
   badge?: string;
   /** Drawn faded: a switched off effect. */
@@ -24,6 +45,11 @@ export interface Group {
   label: string;
   /** Beside the label, e.g. the slots left for a spell level. */
   note?: string;
+  tags?: Tag[];
+  /** Belongs to the group before it, apart from its entries: a smaller label. */
+  sub?: boolean;
+  /** A button beside the label, handled by the HUD as that data-action. */
+  button?: { action: string; icon: string; label: string; active?: boolean };
   entries: Entry[];
 }
 
@@ -100,15 +126,345 @@ export async function pickActor(actor: any) {
   token?.control({ releaseOthers: true });
 }
 
+/** dnd5e's compendium content carries notes on how Foundry automates it, as secrets: nothing a player needs. */
+function withoutFoundryNotes(html: string): string {
+  if (!/foundry\s*note/i.test(html)) return html;
+  const box = document.createElement("template");
+  box.innerHTML = html;
+  box.content.querySelectorAll("section.secret, .foundry-note").forEach((section) => {
+    if (/^\s*foundry\s*note/i.test(section.textContent ?? "")) section.remove();
+  });
+  return box.innerHTML;
+}
+
 /** The rich text of a document as HTML, with links and inline rolls like on its sheet. */
 const enrich = (text: unknown, doc: any) => async (): Promise<string> => {
   if (!text) return "";
-  return foundry.applications.ux.TextEditor.implementation.enrichHTML(String(text), {
+  const html = await foundry.applications.ux.TextEditor.implementation.enrichHTML(String(text), {
     relativeTo: doc,
     rollData: doc.getRollData?.() ?? {},
     secrets: doc.isOwner,
   });
+  return withoutFoundryNotes(html);
 };
+
+const KINDS: Kind[] = ["bonus", "reaction"];
+
+/** Bonus action or reaction: the casting time of a spell, else how the activity (the item's first) is activated. */
+function kindOf(item: any, activity?: any): Kind | undefined {
+  const first = activity ?? [...(item.system.activities ?? [])][0];
+  const type =
+    (item.type === "spell" && !activity ? item.system.activation?.type : undefined) ?? first?.activation?.type;
+  return KINDS.find((k) => k === type);
+}
+
+interface Dice {
+  formula: string;
+  /** With the kind of damage: "2d6 Fire". */
+  label: string;
+  /** dnd5e's sign of that kind of damage, if it is of one kind. */
+  img?: string;
+}
+
+/** dnd5e's sign of a kind of damage or healing, as its sheets show it: "fire". */
+const typeSign = (type: unknown): string | undefined =>
+  typeof type === "string"
+    ? (CONFIG.DND5E.damageTypes?.[type]?.icon ?? CONFIG.DND5E.healingTypes?.[type]?.icon ?? undefined)
+    : undefined;
+
+/** A formula with the numbers of who rolls it instead of "@mod". */
+function resolved(formula: string, activity: any): string {
+  try {
+    return new Roll(formula, activity.getRollData?.() ?? {}).formula;
+  } catch {
+    return formula;
+  }
+}
+
+/** How many targets an activity has when cast `increase` levels higher: the rays of Scorching Ray, the missiles. */
+function targetCount(activity: any, spell: any, increase: number): number {
+  const base = Number(activity.target?.affects?.count) || 0;
+  const formula = activity._source?.target?.affects?.count;
+  if (!increase || !formula || !/@/.test(String(formula))) return base;
+  try {
+    const data = { ...(activity.getRollData?.() ?? {}) };
+    data.item = { ...data.item, level: spell.system.level + increase };
+    data.scaling = { increase, value: increase + 1 };
+    return Number(Roll.safeEval(Roll.replaceFormulaData(String(formula), data))) || base;
+  } catch {
+    return base;
+  }
+}
+
+/**
+ * The dice a spell harms (or heals) with, cast `increase` levels above its own. What hits several times says so:
+ * "3× 2d6".
+ */
+function spellDice(spell: any, heal: boolean, increase = 0): Dice | undefined {
+  const activity = [...(spell.system.activities ?? [])].find(
+    (a: any) => (a.type === "heal") === heal && a.labels?.damage?.length,
+  );
+  const base = activity?.labels.damage[0];
+  if (!base?.formula) return undefined;
+  let formula: string = base.formula;
+  const part = heal ? activity.healing : activity.damage?.parts?.[0];
+  if (increase && part?.scaledFormula) {
+    try {
+      formula = resolved(part.scaledFormula(increase), activity) || formula;
+    } catch {
+      /* the dice of its own level then */
+    }
+  }
+  const count = heal ? 0 : targetCount(activity, spell, increase);
+  const text = count > 1 ? `${count}× ${formula}` : formula;
+  // What heals hit points says no kind: only what heals something else does, temporary hit points
+  if (heal && (!base.damageType || base.damageType === "healing")) return { formula: text, label: text };
+  return {
+    formula: text,
+    label: String(base.label ?? "").replace(base.formula, text) || text,
+    img: typeSign(base.damageType),
+  };
+}
+
+/** The creatures spells summon, by uuid. Null: not read yet, or gone. */
+const summoned = new Map<string, any>();
+let summonListener: (() => void) | undefined;
+
+/** Called when what a summoning spell harms with is known: it is read from the creature, which takes a moment. */
+export function onSummonDice(listener: () => void) {
+  summonListener = listener;
+}
+
+/**
+ * The dice of a creature's first attack when `summon` calls it, `increase` levels above the spell's own. Its
+ * formula may count on the slot and the caster: "(@flags.dnd5e.summon.level - 1)d8 + @flags.dnd5e.summon.mod".
+ */
+function creatureDice(creature: any, spell: any, summon: any, increase: number): Dice | undefined {
+  for (const item of creature?.items ?? []) {
+    const attack = [...(item.system.activities ?? [])].find((a: any) => a.labels?.damage?.length);
+    const shown = attack?.labels.damage[0];
+    if (!shown?.formula) continue;
+    let formula: string = shown.formula;
+    const raw = attack.damage?.parts?.[0]?.formula;
+    if (typeof raw === "string" && raw.includes("@flags.dnd5e.summon")) {
+      try {
+        const data = { ...(attack.getRollData?.() ?? {}) };
+        const level = (Number(spell.system.level) || 0) + increase;
+        const mod = Number(summon.getRollData?.()?.mod) || 0;
+        data.flags = { ...data.flags, dnd5e: { ...data.flags?.dnd5e, summon: { level, mod } } };
+        // "(3 - 1)d8" is 2d8
+        const counted = Roll.replaceFormulaData(raw, data, { missing: "0" }).replace(
+          /\(([\d\s+*/-]+)\)d/g,
+          (_: string, n: string) => `${Roll.safeEval(n)}d`,
+        );
+        formula = (globalThis as any).dnd5e?.dice?.simplifyRollFormula?.(counted) || counted;
+      } catch {
+        /* as its sheet shows it then */
+      }
+    }
+    return {
+      formula,
+      label: `${creature.name}: ${String(shown.label ?? "").replace(shown.formula, formula) || formula}`,
+      img: typeSign(shown.damageType),
+    };
+  }
+  return undefined;
+}
+
+/**
+ * A spell like Spiritual Weapon harms with what it summons, not itself: the dice of that creature's first attack.
+ * The creature is the world's copy of it if there is one (a summon was made of it), else it is read from its
+ * compendium: undefined until then.
+ */
+function summonedDice(spell: any, increase = 0): Dice | undefined {
+  const summon = [...(spell.system.activities ?? [])].find((a: any) => a.type === "summon");
+  const uuid: unknown = summon?.profiles?.[0]?.uuid;
+  if (typeof uuid !== "string" || !uuid) return undefined;
+  if (!summoned.has(uuid)) {
+    const local = game.actors.get(uuid.split(".").pop());
+    summoned.set(uuid, local ?? null);
+    if (!local) {
+      void Promise.resolve(fromUuid(uuid))
+        .then((creature: any) => {
+          if (!creature) return;
+          summoned.set(uuid, creature);
+          summonListener?.();
+        })
+        .catch((e: unknown) => console.warn(`${MODULE_ID} | ${uuid} not read`, e));
+    }
+  }
+  return creatureDice(summoned.get(uuid), spell, summon, increase);
+}
+
+/**
+ * What a spell does at a glance: concentration, ritual, its range, the dice it heals or harms with, costly materials.
+ * With `increase` the dice are the ones of a slot that many levels higher.
+ */
+function spellTags(spell: any, increase = 0): Tag[] {
+  const tags: Tag[] = [];
+  const labels = spell.labels ?? {};
+  if (spell.system.properties?.has("concentration")) {
+    tags.push({ icon: "fa-solid fa-head-side-brain", tooltip: loc("DND5E.Concentration") });
+  }
+  if (spell.system.properties?.has("ritual")) {
+    tags.push({ icon: "fa-solid fa-book-open", tooltip: loc("DND5E.ITEM.Property.Ritual") });
+  }
+  if (labels.range)
+    tags.push({ icon: "fa-solid fa-ruler-horizontal", text: labels.range, tooltip: loc("DND5E.Range") });
+  const damage = spellDice(spell, false, increase) ?? summonedDice(spell, increase);
+  if (damage)
+    tags.push({ icon: "fa-solid fa-burst bah-harm", img: damage.img, text: damage.formula, tooltip: damage.label });
+  const healing = spellDice(spell, true, increase);
+  if (healing)
+    tags.push({ icon: "fa-solid fa-heart bah-heal", img: healing.img, text: healing.formula, tooltip: healing.label });
+  if (costly(spell)) {
+    tags.push({ icon: "fa-solid fa-coins bah-cost", tooltip: labels.materials || loc("DND5E.Materials") });
+  }
+  return tags;
+}
+
+/** Whether a higher slot changes the dice of a spell, how often it hits, or the dice of what it summons. */
+function gainsFrom(spell: any, increase: number): boolean {
+  return (
+    [false, true].some((heal) => spellDice(spell, heal, increase)?.formula !== spellDice(spell, heal)?.formula) ||
+    summonedDice(spell, increase)?.formula !== summonedDice(spell)?.formula
+  );
+}
+
+const COSTLY = /\d\+?\s*[cseg]p\b/i;
+
+/** Whether a spell needs materials that cost. Not every spell has the price as a number, but the text names it. */
+const costly = (spell: any) => Number(spell.system.materials?.cost) > 0 || COSTLY.test(spell.labels?.materials ?? "");
+
+/** A picture drawn in one color, the one of `look`: dnd5e's sign of a kind of damage, "bah-harm". */
+export const signHtml = (img: string, look = "") =>
+  `<i class="bah-sign ${esc(look)}" style="-webkit-mask-image: url('${esc(img)}'); mask-image: url('${esc(img)}')" inert></i>`;
+
+/** The color an icon has: "bah-harm" of "fa-solid fa-burst bah-harm". */
+export const lookOf = (icon: string) => icon.replace(/\bfa-\S+/g, "").trim();
+
+/** Text that is HTML already. */
+interface Html {
+  html: string;
+}
+
+/** Dice as they are said, "3d6 Psychic", with the sign of that kind of damage between the dice and its name. */
+function diceHtml(dice: { formula: string; label?: string; img?: string } | undefined, look: string): Html | undefined {
+  if (!dice?.formula) return undefined;
+  const label = dice.label || dice.formula;
+  const end = label.indexOf(dice.formula) + dice.formula.length;
+  if (!dice.img || end < dice.formula.length) return { html: esc(label) };
+  return { html: `${esc(label.slice(0, end))} ${signHtml(dice.img, look)}${esc(label.slice(end))}` };
+}
+
+/** Rows of a label and its value, some with an icon before the value: "fa-burst bah-harm" in the color of harm. */
+const factList = (facts: [string, unknown, string?][]): string => {
+  const rows = facts
+    .filter(([, value]) => value)
+    .map(([key, value, icon]) => {
+      const text = typeof (value as Html).html === "string" ? (value as Html).html : esc(value);
+      return `<dt>${esc(loc(key))}</dt><dd>${icon ? `<i class="fa-solid ${icon}" inert></i>` : ""}${text}</dd>`;
+    });
+  return rows.length ? `<dl class="bah-facts">${rows.join("")}</dl>` : "";
+};
+
+/** The first attack of what attacks, a weapon or a claw. */
+const attackOf = (item: any) => item.system.activities?.getByType?.("attack")?.[0];
+
+/**
+ * How far an attack goes. The item knows both ranges of what shoots, "30/120 ft": the attack only the far one. What
+ * only reaches the next square, 5 ft, has no range worth telling.
+ */
+function attackRange(item: any, attack: any): string | undefined {
+  if (item.labels?.range) return item.labels.range;
+  const range = attack.range ?? {};
+  if (range.units === "ft" && Number(range.value) <= 5) return undefined;
+  return attack.labels?.range || undefined;
+}
+
+/**
+ * Above the description of what attacks: what it adds to the attack roll, its damage and its range. Of `attack`,
+ * else of the first attack the item has. Empty for what does not attack.
+ */
+function attackFacts(item: any, attack?: any): string {
+  attack ??= attackOf(item);
+  if (attack?.type !== "attack") return "";
+  const labels = attack.labels ?? {};
+  // Each part of the damage with the sign of its own kind
+  const damage: string[] = (labels.damage ?? [])
+    .map((d: any) => diceHtml({ formula: d.formula, label: d.label, img: typeSign(d.damageType) }, "bah-harm")?.html)
+    .filter(Boolean);
+  return factList([
+    ["DND5E.ToHit", labels.toHit],
+    ["DND5E.Range", attackRange(item, attack), "fa-ruler-horizontal"],
+    ["DND5E.Damage", damage.length ? { html: damage.join(", ") } : undefined, "fa-burst bah-harm"],
+  ]);
+}
+
+/** Above a spell's description: how it is cast and what it does. */
+function spellFacts(spell: any): string {
+  const labels = spell.labels ?? {};
+  const components = [labels.components?.vsm, labels.materials ? `(${labels.materials})` : ""]
+    .filter(Boolean)
+    .join(" ");
+  const harm = spellDice(spell, false) ?? summonedDice(spell);
+  const healing = spellDice(spell, true);
+  return factList([
+    ["DND5E.SpellCastTime", labels.activation],
+    ["DND5E.Target", labels.target],
+    ["DND5E.Components", components, costly(spell) ? "fa-coins bah-cost" : undefined],
+    ["DND5E.Duration", labels.concentrationDuration ?? labels.duration],
+    ["DND5E.Range", labels.range, "fa-ruler-horizontal"],
+    ["DND5E.Damage", diceHtml(harm, "bah-harm"), "fa-burst bah-harm"],
+    ["BEAVERS_ACTION_HUD.facts.healing", diceHtml(healing, "bah-heal"), "fa-heart bah-heal"],
+  ]);
+}
+
+/** The shield of the dnd5e sheet: lit on what is equipped, a click puts it on or away. Not on what cannot be. */
+function equipToggle(item: any): Entry["toggle"] {
+  if (typeof item.system.equipped !== "boolean") return undefined;
+  const on = item.system.equipped;
+  return {
+    icon: "fa-solid fa-shield-halved",
+    on,
+    tooltip: loc(on ? "DND5E.Equipped" : "DND5E.Unequipped"),
+    run: () => item.update({ "system.equipped": !on }),
+  };
+}
+
+/**
+ * What a carried thing is at a glance: the weight of all of it first, attuned, the range and dice of a weapon.
+ */
+function gearTags(item: any): Tag[] {
+  const tags: Tag[] = [];
+  const system = item.system;
+  // Of a container it is not known at once: it has to ask for what is in it
+  const weight = system.totalWeight;
+  if (typeof weight === "number" && weight >= 0.05) {
+    const units = CONFIG.DND5E.weightUnits?.[system.weight?.units];
+    tags.push({
+      icon: "fa-solid fa-weight-hanging",
+      text: `${Math.round(weight * 10) / 10} ${units?.abbreviation ?? system.weight?.units ?? ""}`.trim(),
+      tooltip: loc("DND5E.Weight"),
+    });
+  }
+  if (system.attuned) tags.push({ icon: "fa-solid fa-sun", tooltip: loc("DND5E.Attuned") });
+  const attack = attackOf(item);
+  if (attack) {
+    const range = attackRange(item, attack);
+    if (range) tags.push({ icon: "fa-solid fa-ruler-horizontal", text: range, tooltip: loc("DND5E.Range") });
+    const damage = attack.labels?.damage?.[0];
+    if (damage?.formula) {
+      tags.push({
+        icon: "fa-solid fa-burst bah-harm",
+        img: typeSign(damage.damageType),
+        text: damage.formula,
+        tooltip: damage.label ?? damage.formula,
+      });
+    }
+  }
+  return tags;
+}
 
 /**
  * The ammunition a weapon shoots: what its last attack used, else the first the character carries that fits, like
@@ -151,22 +507,32 @@ function badgeOf(item: any): string | undefined {
 const openSheet = (doc: any) => () => doc.sheet?.render({ force: true });
 
 function itemEntry(item: any): Entry {
+  const description = enrich(item.system.description?.value, item);
+  const spell = item.type === "spell";
+  const school = spell ? CONFIG.DND5E.spellSchools?.[item.system.school] : undefined;
   return {
     name: item.name,
     img: item.img,
     badge: badgeOf(item),
+    kind: kindOf(item),
+    tags: spell ? spellTags(item) : undefined,
+    mark: school?.icon ? { img: school.icon, label: loc(school.label) } : undefined,
     use: (event) => item.use({ event }),
     sheet: openSheet(item),
     ref: { type: "item", id: `.Item.${item.id}` },
-    describe: enrich(item.system.description?.value, item),
+    describe: async () => (spell ? spellFacts(item) : attackFacts(item)) + (await description()),
   };
 }
 
+/** An effect that is not in force: switched off, run out, or of an item that is not worn or attuned. */
+const inactive = (effect: any) => !!(effect.disabled || effect.duration?.expired || effect.isSuppressed);
+
+/** As a button of the bar or a row of the drawer: a click switches the effect on or off. */
 function effectEntry(effect: any): Entry {
   return {
     name: effect.name,
     img: effect.img,
-    dimmed: effect.disabled,
+    dimmed: inactive(effect),
     use: () => effect.update({ disabled: !effect.disabled }),
     sheet: openSheet(effect),
     ref: { type: "effect", id: effect.uuid },
@@ -232,14 +598,16 @@ async function refEntry(actor: any, ref: BarRef): Promise<Entry | undefined> {
   if (type === "item") return { ...itemEntry(doc), ref };
   if (type === "effect") return { ...effectEntry(doc), ref };
   const item = doc.item;
+  const description = enrich(doc.description?.chatFlavor || item.system.description?.value, item);
   return {
     ref,
     name: doc.name && doc.name !== item.name ? `${item.name}: ${doc.name}` : item.name,
     img: doc.img ?? item.img,
     badge: badgeOf(item),
+    kind: kindOf(item, doc),
     use: (event) => doc.use({ event }),
     sheet: openSheet(item),
-    describe: enrich(doc.description?.chatFlavor || item.system.description?.value, item),
+    describe: async () => attackFacts(item, doc) + (await description()),
   };
 }
 
@@ -292,24 +660,64 @@ export function foundryDropRef(actor: any, data: any): BarRef | undefined {
 const castable = (spell: any) =>
   spell.system.level === 0 || !spell.system.canPrepare || Number(spell.system.prepared) > 0;
 
-/** The castable spells by level; with `only` just the ones of that level. */
+/**
+ * The castable spells by level; with `only` just the ones of that level. The label of a level says what its spells
+ * are cast with: the slots left, the higher ones after a plus, and the save DC. After them, each apart:
+ * - spells cast with something else (the charges of a wand, uses per day, at will), which say so themselves;
+ * - spells of lower levels that do more with a slot of this level, with the dice they have then. A click casts
+ *   them with that slot.
+ */
 export function spellGroups(actor: any, only?: number): Group[] {
-  const levels = new Map<number, any[]>();
-  for (const spell of actor.itemTypes?.spell ?? []) {
-    const level = Number(spell.system.level) || 0;
-    if (!castable(spell) || (only !== undefined && level !== only)) continue;
-    if (!levels.has(level)) levels.set(level, []);
-    levels.get(level)!.push(spell);
-  }
-  return [...levels.keys()]
+  const spells: any[] = (actor.itemTypes?.spell ?? []).filter(castable).sort(byName);
+  const levelOf = (spell: any) => Number(spell.system.level) || 0;
+  const slots = slotGlobes(actor.system.spells);
+  const badge = (level: number) => (level > 0 ? spellSlotBadge(actor.system.spells, level) : "");
+  const slotted = (spell: any) => (badgeOf(spell) ?? "") === badge(levelOf(spell));
+  const scalable = spells.filter((s) => levelOf(s) > 0 && s.system.canScale !== false && slotted(s));
+  const upcast = (level: number) =>
+    slots.some((g) => g.level === level)
+      ? scalable.filter((s) => levelOf(s) < level && gainsFrom(s, level - levelOf(s)))
+      : [];
+
+  const levels = new Set<number>(spells.map(levelOf));
+  for (const slot of slots) if (upcast(slot.level).length) levels.add(slot.level);
+  const dc = actor.system.attributes?.spell?.dc;
+  const tags: Tag[] = dc
+    ? [{ icon: "fa-solid fa-shield-halved", text: String(dc), tooltip: loc("DND5E.SpellDC") }]
+    : [];
+  return [...levels]
+    .filter((level) => only === undefined || level === only)
     .sort((a, b) => a - b)
-    .map((level) => {
-      const slot = actor.system.spells?.[`spell${level}`];
-      return {
-        label: CONFIG.DND5E.spellLevels?.[level] ?? String(level),
-        note: slot?.max ? `${slot.value}/${slot.max}` : undefined,
-        entries: levels.get(level)!.sort(byName).map(itemEntry),
-      };
+    .flatMap((level) => {
+      const own = spells.filter((s) => levelOf(s) === level);
+      const groups: Group[] = [
+        {
+          label: CONFIG.DND5E.spellLevels?.[level] ?? String(level),
+          note: badge(level) || undefined,
+          tags,
+          entries: own.filter(slotted).map((s) => ({ ...itemEntry(s), badge: undefined })),
+        },
+      ];
+      const others = own.filter((s) => !slotted(s));
+      if (others.length) {
+        groups.push({ label: loc("BEAVERS_ACTION_HUD.drawer.otherUses"), sub: true, entries: others.map(itemEntry) });
+      }
+      const higher = upcast(level);
+      if (higher.length) {
+        // The slots of that level that are left, a pact slot only if there is no other
+        const slot = slots.find((g) => g.level === level && g.value > 0) ?? slots.find((g) => g.level === level);
+        groups.push({
+          label: loc("BEAVERS_ACTION_HUD.drawer.upcast"),
+          sub: true,
+          entries: higher.map((s) => ({
+            ...itemEntry(s),
+            badge: undefined,
+            tags: spellTags(s, level - levelOf(s)),
+            use: (event: Event) => s.use({ event, spell: { slot: slot?.key } }),
+          })),
+        });
+      }
+      return groups;
     });
 }
 
@@ -323,7 +731,9 @@ export function inventoryGroups(actor: any): Group[] {
   }
   return [...types.entries()].map(([type, items]) => ({
     label: loc(CONFIG.Item.typeLabels?.[type] ?? type),
-    entries: items.sort(byName).map(itemEntry),
+    entries: items
+      .sort(byName)
+      .map((item) => ({ ...itemEntry(item), tags: gearTags(item), toggle: equipToggle(item) })),
   }));
 }
 
@@ -353,13 +763,80 @@ export function checkGroups(actor: any): Group[] {
   ].filter((g) => g.entries.length);
 }
 
-/** The effects on the character, also the ones its items give. A click switches one on or off. */
-export function effectGroups(actor: any): Group[] {
-  const effects: any[] = Array.from<any>(actor.allApplicableEffects?.() ?? actor.effects).sort(byName);
-  return [
-    { label: loc("BEAVERS_ACTION_HUD.drawer.active"), entries: effects.filter((e) => !e.disabled).map(effectEntry) },
-    { label: loc("BEAVERS_ACTION_HUD.drawer.inactive"), entries: effects.filter((e) => e.disabled).map(effectEntry) },
+const leveled = (condition: string) => Number.isFinite(CONFIG.DND5E.conditionTypes?.[condition]?.levels);
+
+/** The condition an effect of that type is, e.g. "prone". */
+const conditionOf = (effect: any): string => effect.system?.type ?? [...(effect.statuses ?? [])][0] ?? "";
+
+/**
+ * The effects on the character, also the ones its items give, sorted like on the dnd5e sheet.
+ * - Active: what lasts a while. A click switches it off.
+ * - Passive: what is simply in force, like a trait of the species. Nothing to do with these here.
+ * - Inactive: a click switches it on again. One of the character's own can be removed for good; one of an item
+ *   belongs to that item.
+ * - Conditions: the ones the character has, each to be removed. With `adding` every other condition follows, to be
+ *   picked; `added` is called then.
+ */
+export function effectGroups(actor: any, adding = false, added?: () => void): Group[] {
+  const effects: any[] = Array.from<any>(actor.allApplicableEffects?.() ?? actor.effects)
+    .filter((e) => !e.isConcealed)
+    .sort(byName);
+  const conditions = effects.filter((e) => e.type === "condition");
+  const others = effects.filter((e) => e.type !== "condition");
+  const active = others.filter((e) => !inactive(e) && e.isTemporary).map(effectEntry);
+  const passive = others
+    .filter((e) => !inactive(e) && !e.isTemporary)
+    .map((e) => ({ ...effectEntry(e), use: () => undefined }));
+  const off = others.filter(inactive).map((e) => ({
+    ...effectEntry(e),
+    // What its item suppresses is not switched on here
+    use: () => (e.disabled ? e.update({ disabled: false }) : undefined),
+    remove: e.parent === actor ? () => e.deleteDialog() : undefined,
+  }));
+  const groups: Group[] = [
+    { label: loc("BEAVERS_ACTION_HUD.drawer.active"), entries: active },
+    { label: loc("BEAVERS_ACTION_HUD.drawer.passive"), entries: passive },
+    { label: loc("BEAVERS_ACTION_HUD.drawer.inactive"), entries: off },
   ].filter((g) => g.entries.length);
+
+  const has = new Set(conditions.map(conditionOf));
+  groups.push({
+    label: loc("DND5E.Conditions"),
+    button: {
+      action: "conditions",
+      icon: adding ? "fa-solid fa-minus" : "fa-solid fa-plus",
+      label: loc("BEAVERS_ACTION_HUD.drawer.addCondition"),
+      active: adding,
+    },
+    entries: conditions.map((e) => ({
+      name: e.name,
+      img: e.img,
+      use: () => undefined,
+      // A level less of exhaustion, the others go
+      remove: () => (leveled(conditionOf(e)) ? actor.toggleStatusEffect(conditionOf(e), { levels: -1 }) : e.delete()),
+      sheet: openSheet(e),
+      describe: enrich(e.description, e),
+    })),
+  });
+  if (adding) {
+    const types = Object.entries<any>(CONFIG.DND5E.conditionTypes ?? {})
+      .filter(([id, c]) => !c.pseudo && (!has.has(id) || leveled(id)))
+      .map(([id, c]) => ({ id, name: loc(c.name), img: c.img ?? c.icon ?? "icons/svg/aura.svg" }))
+      .sort(byName);
+    groups.push({
+      label: loc("BEAVERS_ACTION_HUD.drawer.addCondition"),
+      sub: true,
+      entries: types.map((c) => ({
+        name: c.name,
+        img: c.img,
+        use: async () => {
+          await actor.toggleStatusEffect(c.id, leveled(c.id) ? { levels: 1 } : { active: true });
+          added?.();
+        },
+      })),
+    });
+  }
+  return groups;
 }
 
 /**

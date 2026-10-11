@@ -142,11 +142,6 @@ body.bah-map #beavers-action-hud .bah-minimap {
   display: none;
 }
 
-/* room for the sidebar, so it does not cover the health globe */
-body.bah-chat #beavers-action-hud .bah-bottom {
-  right: var(--sidebar-width, 348px);
-}
-
 #beavers-action-hud .bah-center {
   min-width: 0;
   max-width: min(760px, 60vw);
@@ -804,7 +799,6 @@ body.bah-map #beavers-action-hud {
   gap: 8px;
 }
 
-body.bah-chat #beavers-action-hud .bah-side,
 body.bah-map #beavers-action-hud .bah-side {
   display: none;
 }
@@ -1352,4 +1346,435 @@ body.bah-hud:not(.bah-map) #combat-popout {
 #beavers-action-hud .bah-plate {
   padding: 4px 10px 4px 4px;
   border-radius: 999px 8px 8px 999px;
+}
+
+/* ---------- chat open: Foundry's chat log, the upper half of the right side, to read and scroll ---------- */
+
+body.bah-hud.bah-chat:not(.bah-map) #sidebar {
+  height: calc(50% - 12px);
+  margin-top: 12px;
+}
+
+/* the other tabs of the sidebar are not for the HUD */
+body.bah-hud.bah-chat:not(.bah-map) #sidebar-tabs {
+  display: none !important;
+}
+
+/* writing is a setting: the input field and who the message goes to */
+body.bah-hud.bah-chat:not(.bah-chat-input):not(.bah-map) #chat-message,
+body.bah-hud.bah-chat:not(.bah-chat-input):not(.bah-map) #chat-controls {
+  display: none !important;
+}
+
+/* the log replaces the bubbles; the description is below it, in the lower half */
+body.bah-chat #beavers-action-hud .bah-toasts {
+  display: none;
+}
+
+body.bah-chat #beavers-action-hud .bah-side {
+  top: calc(50vh + 8px);
+  right: 6px;
+  width: calc(var(--sidebar-width, 300px) * var(--ui-scale, 1));
+  max-height: calc(50vh - 28px);
+}
+
+/* ---------- bonus actions are green, reactions purple ---------- */
+
+#beavers-action-hud {
+  --bah-bonus: #4fbf6b;
+  --bah-reaction: #a86bf0;
+}
+
+#beavers-action-hud .bah-action.bah-bonus,
+#beavers-action-hud .bah-row.bah-bonus img {
+  border-color: var(--bah-bonus);
+}
+
+#beavers-action-hud .bah-action.bah-reaction,
+#beavers-action-hud .bah-row.bah-reaction img {
+  border-color: var(--bah-reaction);
+}
+
+#beavers-action-hud .bah-action.bah-bonus:hover {
+  box-shadow: 0 0 8px var(--bah-bonus);
+}
+
+#beavers-action-hud .bah-action.bah-reaction:hover {
+  box-shadow: 0 0 8px var(--bah-reaction);
+}
+
+/* ---------- the x on an entry: off the bar, or off the character ---------- */
+
+#beavers-action-hud .bah-action-box,
+#beavers-action-hud .bah-row-box {
+  position: relative;
+  flex: none;
+  display: flex;
+}
+
+#beavers-action-hud .bah-row-box .bah-row {
+  flex: 1;
+  min-width: 0;
+  padding-right: 30px;
+}
+
+#beavers-action-hud .bah-remove {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+  color: #fff;
+  background: #a3231d;
+  border: 1px solid #000;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  pointer-events: auto;
+}
+
+#beavers-action-hud .bah-remove:hover {
+  background: #ff5548;
+  border-color: #fff;
+  transform: scale(1.2);
+}
+
+/* on the corner of a bar button, a little outside of it, while the pointer is on the button or on the x */
+#beavers-action-hud .bah-action-box .bah-remove {
+  top: -7px;
+  right: -7px;
+  display: none;
+}
+
+#beavers-action-hud .bah-action-box:hover .bah-remove {
+  display: flex;
+}
+
+#beavers-action-hud .bah-row-box .bah-remove {
+  top: 50%;
+  right: 6px;
+  margin-top: -9px;
+}
+
+/* ---------- group labels: the save DC, a button, a group inside a group ---------- */
+
+#beavers-action-hud .bah-drawer h4 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#beavers-action-hud .bah-drawer h4 .bah-note {
+  margin-left: 0;
+}
+
+#beavers-action-hud .bah-drawer h4.bah-sub {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: normal;
+  font-family: var(--font-primary, "Signika", sans-serif);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--bah-text);
+  opacity: 0.7;
+}
+
+#beavers-action-hud .bah-drawer h4 .bah-tag {
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--bah-text);
+  opacity: 1;
+}
+
+#beavers-action-hud .bah-group-button {
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  background: #0d0b08;
+  border: 1px solid var(--bah-gold-dim);
+  border-radius: 4px;
+}
+
+#beavers-action-hud .bah-group-button:hover,
+#beavers-action-hud .bah-group-button.active {
+  color: var(--bah-gold);
+  border-color: var(--bah-gold);
+}
+
+/* ---------- spell rows: more room, and below the name what the spell does ---------- */
+
+#beavers-action-hud .bah-rows.bah-wide {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 6px;
+}
+
+#beavers-action-hud .bah-row.bah-high {
+  gap: 10px;
+  padding: 6px 8px 6px 6px;
+}
+
+#beavers-action-hud .bah-row.bah-high img {
+  width: 38px;
+  height: 38px;
+  border-width: 2px;
+}
+
+#beavers-action-hud .bah-lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+#beavers-action-hud .bah-row.bah-high .bah-name {
+  flex: none;
+  font-size: 14px;
+}
+
+#beavers-action-hud .bah-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+  min-height: 12px;
+}
+
+#beavers-action-hud .bah-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-primary, "Signika", sans-serif);
+  font-size: 12px;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+#beavers-action-hud .bah-tag i {
+  color: var(--bah-gold);
+}
+
+#beavers-action-hud .bah-tag i.bah-harm {
+  color: #ff7a5c;
+}
+
+#beavers-action-hud .bah-tag i.bah-heal {
+  color: #6fdc7c;
+}
+
+#beavers-action-hud .bah-tag i.bah-cost {
+  color: #ffd75e;
+}
+
+/* ---------- above a spell's description: how it is cast ---------- */
+
+#beavers-action-hud .bah-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--bah-gold-dim);
+}
+
+#beavers-action-hud .bah-facts dt {
+  font-weight: normal;
+  color: var(--bah-gold);
+}
+
+#beavers-action-hud .bah-facts dd {
+  margin: 0;
+}
+
+/* ---------- the description: its picture in the head, a color for each fact ---------- */
+
+#beavers-action-hud .bah-info .bah-info-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+}
+
+#beavers-action-hud .bah-info-head img {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border: 1px solid var(--bah-gold-dim);
+  border-radius: 4px;
+  background: #0d0b08;
+}
+
+#beavers-action-hud .bah-info-head.bah-bonus img {
+  border-color: var(--bah-bonus);
+}
+
+#beavers-action-hud .bah-info-head.bah-reaction img {
+  border-color: var(--bah-reaction);
+}
+
+#beavers-action-hud .bah-info-head.bah-bonus {
+  color: var(--bah-bonus);
+}
+
+#beavers-action-hud .bah-info-head.bah-reaction {
+  color: var(--bah-reaction);
+}
+
+#beavers-action-hud .bah-facts dt i {
+  width: 16px;
+  margin-right: 4px;
+  text-align: center;
+}
+
+#beavers-action-hud .bah-facts .bah-harm {
+  color: #ff7a5c;
+}
+
+#beavers-action-hud .bah-facts .bah-heal {
+  color: #6fdc7c;
+}
+
+#beavers-action-hud .bah-facts .bah-cost {
+  color: #ffd75e;
+}
+
+#beavers-action-hud .bah-info-head span {
+  flex: 1;
+  min-width: 0;
+}
+
+#beavers-action-hud .bah-info-head img.bah-dark {
+  padding: 3px;
+  filter: invert(1);
+  border-color: #856fcf;
+}
+
+/* the school of a spell: dnd5e's dark sign, light here */
+#beavers-action-hud .bah-info-head img.bah-info-mark {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: none;
+  filter: invert(1) sepia(1) saturate(2.5) hue-rotate(5deg);
+  opacity: 0.9;
+  pointer-events: auto;
+}
+
+/* ---------- the shield at the end of an inventory row: lit on what is equipped, a click switches ---------- */
+
+#beavers-action-hud .bah-toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  margin-top: -12px;
+  padding: 0;
+  font-size: 14px;
+  color: #6b6558;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+#beavers-action-hud .bah-toggle.active {
+  color: var(--bah-gold);
+}
+
+#beavers-action-hud .bah-toggle:hover {
+  color: #fff;
+  box-shadow: none;
+}
+
+/* Foundry frames a pressed button: here the color of the shield says it */
+#beavers-action-hud button.bah-toggle[aria-pressed],
+#beavers-action-hud button.bah-toggle[aria-pressed]:hover,
+#beavers-action-hud button.bah-toggle[aria-pressed]:focus {
+  background: none;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+}
+
+/* ---------- dnd5e's sign of a kind of damage, in the color of the icon it stands for ---------- */
+
+#beavers-action-hud .bah-sign {
+  display: inline-block;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  vertical-align: -2px;
+  background: currentColor;
+  -webkit-mask: center / contain no-repeat;
+  mask: center / contain no-repeat;
+}
+
+#beavers-action-hud .bah-facts dd .bah-sign {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+}
+
+#beavers-action-hud .bah-sign.bah-harm {
+  color: #ff7a5c;
+}
+
+#beavers-action-hud .bah-sign.bah-heal {
+  color: #6fdc7c;
+}
+
+/* ---------- a fact's icon stands before its value ---------- */
+
+#beavers-action-hud .bah-facts dd i {
+  width: 16px;
+  margin-right: 5px;
+  text-align: center;
+  color: var(--bah-gold);
+}
+
+#beavers-action-hud .bah-facts dd i.bah-sign {
+  margin-right: 0;
+}
+
+#beavers-action-hud .bah-facts dd i.bah-harm {
+  color: #ff7a5c;
+}
+
+#beavers-action-hud .bah-facts dd i.bah-heal {
+  color: #6fdc7c;
+}
+
+#beavers-action-hud .bah-facts dd i.bah-cost {
+  color: #ffd75e;
+}
+
+/* ---------- the shield in the first line of its row, what is left of the thing below it ---------- */
+
+#beavers-action-hud .bah-toggled .bah-toggle {
+  top: 3px;
+  right: 3px;
+  margin-top: 0;
+}
+
+#beavers-action-hud .bah-toggled .bah-row {
+  padding-right: 8px;
+}
+
+#beavers-action-hud .bah-toggled .bah-row .bah-name {
+  padding-right: 22px;
+}
+
+#beavers-action-hud .bah-toggled .bah-row .bah-badge {
+  align-self: flex-end;
+  margin-bottom: 1px;
 }

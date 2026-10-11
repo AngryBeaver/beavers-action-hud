@@ -9,6 +9,9 @@ import {
   hudActor,
   inventoryGroups,
   journalGroups,
+  onSummonDice,
+  signHtml,
+  lookOf,
   openSheetTab,
   pickActor,
   setBar,
@@ -16,11 +19,13 @@ import {
   spellGroups,
   type Entry,
   type Group,
+  type Tag,
 } from "./actorData.js";
 import {
   arcPath,
   DICE,
   diceFormula,
+  esc,
   fraction,
   higherSlots,
   MODULE_ID,
@@ -35,6 +40,7 @@ import {
 import { setCombatContainer } from "./combat.js";
 import { setFollowing, setMinimap } from "./map.js";
 import { getSetting, hasExited, hudEnabled, hudWanted, S, setExited } from "./settings.js";
+import { teamSight, teamSightOffered, toggleTeamSight } from "./sight.js";
 import { setToastContainer } from "./toasts.js";
 
 /**
@@ -43,7 +49,6 @@ import { setToastContainer } from "./toasts.js";
  */
 
 const L = (key: string) => game.i18n.localize(`BEAVERS_ACTION_HUD.${key}`);
-const esc = (text: unknown) => String(text ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 const CHECKS = "checks";
 /** What the HUD lists of the character, each in a drawer, in the order of their buttons. */
@@ -52,7 +57,11 @@ const DRAWERS: Record<string, (actor: any) => Group[]> = {
   inventory: inventoryGroups,
   features: featureGroups,
   spells: (actor) => spellGroups(actor, spellLevel),
-  effects: effectGroups,
+  effects: (actor) =>
+    effectGroups(actor, addingCondition, () => {
+      addingCondition = false;
+      refresh();
+    }),
 };
 /** Their icons, where the character sheet has no tab to take it from. */
 const ICONS: Record<string, string> = {
@@ -90,6 +99,8 @@ let picking = false;
 let spellLevel: number | undefined;
 /** The slot level the mana globe shows, a key of the actor's `system.spells`. Picked on the ring around it. */
 let slotKey: string | undefined;
+/** The effects drawer lists every condition, to give the character one. */
+let addingCondition = false;
 /** The quick roll options stay as set, roll after roll. */
 let rollMode: RollMode = "normal";
 let rollBonus = 0;
@@ -104,22 +115,50 @@ function register(entry: Entry): number {
   return entries.length - 1;
 }
 
+/** Dimmed, and by its border a bonus action or a reaction. */
+const looks = (entry: Entry) => (entry.dimmed ? " bah-dimmed" : "") + (entry.kind ? ` bah-${entry.kind}` : "");
+
+/**
+ * The x on the corner of an entry: off the bar, or off the character. A button beside the entry's own, not inside
+ * it: what is inside a button never gets the click in every browser.
+ */
+const removeButton = (action: string, idx: number) =>
+  `<button type="button" class="bah-remove" data-action="${action}" data-idx="${idx}" data-tooltip="${L("button.remove")}"
+    aria-label="${L("button.remove")}"><i class="fa-solid fa-xmark"></i></button>`;
+
 function actionButton(entry: Entry): string {
-  return `<button type="button" class="bah-action${entry.dimmed ? " bah-dimmed" : ""}" data-action="use" draggable="true"
-    data-idx="${register(entry)}" data-tooltip="${esc(entry.name)}" aria-label="${esc(entry.name)}">
+  const idx = register(entry);
+  return `<div class="bah-action-box"><button type="button" class="bah-action${looks(entry)}" data-action="use" draggable="true"
+    data-idx="${idx}" data-tooltip="${esc(entry.name)}" aria-label="${esc(entry.name)}">
     <img src="${esc(entry.img)}" alt="" draggable="false">${entry.badge ? `<span class="bah-badge">${esc(entry.badge)}</span>` : ""}
-  </button>`;
+  </button>${entry.ref ? removeButton("unbar", idx) : ""}</div>`;
 }
 
-/** dnd5e's own pictures of abilities and skills are dark, drawn for its light sheet. */
-const darkPicture = (img: string) => (/^systems\/dnd5e\/icons\/svg\//.test(img) ? ` class="bah-dark"` : "");
+const tagHtml = (tag: Tag) =>
+  `<span class="bah-tag"${tag.tooltip ? ` data-tooltip="${esc(tag.tooltip)}"` : ""}><i class="${esc(tag.icon)}"></i>${esc(tag.text)}${tag.img ? signHtml(tag.img, lookOf(tag.icon)) : ""}</span>`;
+
+/** dnd5e's own pictures of abilities and skills are dark, drawn for its light sheet. The ones of conditions are not. */
+const darkPicture = (img: string) =>
+  /^systems\/dnd5e\/icons\/svg\/(?!statuses\/)/.test(img) ? ` class="bah-dark"` : "";
 
 function drawerRow(entry: Entry): string {
-  return `<button type="button" class="bah-row${entry.dimmed ? " bah-dimmed" : ""}" data-action="use"${entry.ref ? ` draggable="true"` : ""}
-    data-idx="${register(entry)}">
-    <img src="${esc(entry.img)}"${darkPicture(entry.img)} alt="" draggable="false"><span class="bah-name">${esc(entry.name)}</span>
+  const idx = register(entry);
+  const name = `<span class="bah-name">${esc(entry.name)}</span>`;
+  const row = `<button type="button" class="bah-row${looks(entry)}${entry.tags ? " bah-high" : ""}" data-action="use"${entry.ref ? ` draggable="true"` : ""}
+    data-idx="${idx}">
+    <img src="${esc(entry.img)}"${darkPicture(entry.img)} alt="" draggable="false">${
+      entry.tags
+        ? `<span class="bah-lines">${name}<span class="bah-tags">${entry.tags.map(tagHtml).join("")}</span></span>`
+        : name
+    }
     ${entry.badge ? `<span class="bah-badge">${esc(entry.badge)}</span>` : ""}
   </button>`;
+  if (entry.toggle) {
+    const { icon, on, tooltip } = entry.toggle;
+    return `<div class="bah-row-box bah-toggled">${row}<button type="button" class="bah-toggle${on ? " active" : ""}" data-action="toggle"
+      data-idx="${idx}" data-tooltip="${esc(tooltip)}" aria-label="${esc(tooltip)}" aria-pressed="${on}"><i class="${esc(icon)}"></i></button></div>`;
+  }
+  return entry.remove ? `<div class="bah-row-box">${row}${removeButton("remove", idx)}</div>` : row;
 }
 
 /** Quick rolls: the options on top, a click on a die rolls it right away. */
@@ -152,10 +191,20 @@ async function quickRoll(faces: number) {
 function groupsHtml(groups: Group[]): string {
   if (!groups.length) return `<p class="bah-empty">${L("drawer.empty")}</p>`;
   return groups
-    .map(
-      (g) => `<h4>${esc(g.label)}${g.note ? `<span class="bah-note">${esc(g.note)}</span>` : ""}</h4>
-        <div class="bah-rows">${g.entries.map(drawerRow).join("")}</div>`,
-    )
+    .map((g) => {
+      const button = g.button
+        ? `<button type="button" class="bah-group-button${g.button.active ? " active" : ""}" data-action="${esc(g.button.action)}"
+            data-tooltip="${esc(g.button.label)}" aria-label="${esc(g.button.label)}"><i class="${esc(g.button.icon)}"></i></button>`
+        : "";
+      const rows = g.entries.length
+        ? `<div class="bah-rows${g.entries.some((e) => e.tags) ? " bah-wide" : ""}">${g.entries.map(drawerRow).join("")}</div>`
+        : "";
+      return `<h4${g.sub ? ` class="bah-sub"` : ""}>${esc(g.label)}${g.note ? `<span class="bah-note">${esc(g.note)}</span>` : ""}${(
+        g.tags ?? []
+      )
+        .map(tagHtml)
+        .join("")}${button}</h4>${rows}`;
+    })
     .join("");
 }
 
@@ -335,6 +384,18 @@ async function render() {
   if (getSetting<boolean>(S.CHAT)) {
     tabButtons.push(tabButton("chat", "", L("button.chat"), `<i class="fa-solid fa-comments"></i>`, chatOpen));
   }
+  if (teamSightOffered()) {
+    const on = teamSight();
+    tabButtons.push(
+      tabButton(
+        "sight",
+        "",
+        L(on ? "button.teamSightOn" : "button.teamSightOff"),
+        `<i class="fa-solid fa-eye"></i>`,
+        on,
+      ),
+    );
+  }
   tabButtons.push(tabButton("exit", "", L("button.exit"), `<i class="fa-solid fa-right-from-bracket"></i>`, false));
   const title = OWN_DRAWERS.includes(drawer!)
     ? L(`button.${drawer}`)
@@ -368,6 +429,7 @@ function applyClasses() {
   document.body.classList.toggle("bah-hud", on);
   document.body.classList.toggle("bah-map", on && mapOpen);
   document.body.classList.toggle("bah-chat", on && chatOpen);
+  document.body.classList.toggle("bah-chat-input", on && chatOpen && getSetting<boolean>(S.CHAT_INPUT));
   setFollowing(on && !mapOpen);
 }
 
@@ -384,6 +446,8 @@ function toggleChat() {
     ui.sidebar?.expand?.();
   }
   applyClasses();
+  // The log was laid out as high as the window: its newest messages are below the half it has now
+  if (chatOpen) requestAnimationFrame(() => ui.chat?.scrollBottom?.());
   refresh();
 }
 
@@ -398,6 +462,23 @@ function onClick(event: MouseEvent) {
     case "drawer":
       drawer = drawer === tab && spellLevel === undefined ? undefined : tab;
       spellLevel = undefined;
+      addingCondition = false;
+      refresh();
+      break;
+    case "unbar": {
+      const actor = hudActor();
+      const ref = entries[Number(el.dataset.idx)]?.ref;
+      if (actor && ref) void setBar(actor, removeFromBar(barRefs(actor), ref));
+      break;
+    }
+    case "remove":
+      void Promise.resolve(entries[Number(el.dataset.idx)]?.remove?.()).catch((e) => console.error(MODULE_ID, e));
+      break;
+    case "toggle":
+      void Promise.resolve(entries[Number(el.dataset.idx)]?.toggle?.run()).catch((e) => console.error(MODULE_ID, e));
+      break;
+    case "conditions":
+      addingCondition = !addingCondition;
       refresh();
       break;
     case "slot": {
@@ -447,6 +528,9 @@ function onClick(event: MouseEvent) {
     case "chat":
       toggleChat();
       break;
+    case "sight":
+      toggleTeamSight();
+      break;
     case "map":
       toggleMap();
       break;
@@ -481,16 +565,14 @@ export function toggleExit() {
   applyHud();
 }
 
-/** Right click: a button of the bar leaves it, a row of a drawer opens its sheet. */
+/** Right click: the details. The sheet behind the entry, or without one (a skill) its description right away. */
 function onContextMenu(event: MouseEvent) {
   const el = (event.target as HTMLElement).closest<HTMLElement>('[data-action="use"]');
   const entry = el ? entries[Number(el.dataset.idx)] : undefined;
   if (!el || !entry) return;
   event.preventDefault();
-  const actor = hudActor();
-  if (el.classList.contains("bah-action")) {
-    if (actor && entry.ref) void setBar(actor, removeFromBar(barRefs(actor), entry.ref));
-  } else entry.sheet?.();
+  if (entry.sheet) entry.sheet();
+  else void showInfo(entry).catch(console.error);
 }
 
 /**
@@ -545,7 +627,12 @@ async function showInfo(entry: Entry) {
   const target = info;
   const html = await entry.describe?.();
   if (!html || target !== info || !root) return;
-  info.innerHTML = `<h4>${esc(entry.name)}</h4><div class="bah-info-text">${html}</div>`;
+  const picture = entry.img ? `<img src="${esc(entry.img)}"${darkPicture(entry.img)} alt="" draggable="false">` : "";
+  const mark = entry.mark
+    ? `<img class="bah-info-mark" src="${esc(entry.mark.img)}" alt="${esc(entry.mark.label)}" data-tooltip="${esc(entry.mark.label)}" draggable="false">`
+    : "";
+  const head = `<h4 class="bah-info-head${entry.kind ? ` bah-${entry.kind}` : ""}">${picture}<span>${esc(entry.name)}</span>${mark}</h4>`;
+  info.innerHTML = `${head}<div class="bah-info-text">${html}</div>`;
   keepInfo();
 }
 
@@ -608,6 +695,7 @@ function unmount() {
   clearTimeout(infoTimer);
   mapOpen = chatOpen = false;
   drawer = spellLevel = slotKey = undefined;
+  addingCondition = false;
   setMinimap(undefined);
   setToastContainer(undefined);
   setCombatContainer(undefined);
@@ -645,6 +733,7 @@ function concerns(doc: any): boolean {
 }
 
 export function registerHud() {
+  onSummonDice(() => root && drawer === "spells" && refresh());
   for (const type of ["Actor", "Item", "ActiveEffect"]) {
     for (const event of ["create", "update", "delete"]) {
       Hooks.on(`${event}${type}`, (doc: any) => {

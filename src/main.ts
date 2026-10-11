@@ -3,12 +3,14 @@ import { registerCombat } from "./combat.js";
 import { applyHud, registerHud, toggleExit, toggleMap } from "./hud.js";
 import { registerMap, requestDraw } from "./map.js";
 import { registerNotes } from "./notes.js";
-import { HOOK_SETTINGS, hudWanted, registerSettings, S, setExited } from "./settings.js";
+import { HOOK_SETTINGS, HOOK_SIGHT, hudWanted, registerSettings, S, setExited } from "./settings.js";
+import { refreshSight, registerSight } from "./sight.js";
 import { registerToasts } from "./toasts.js";
 
 Hooks.once("init", () => {
   registerSettings();
   registerNotes();
+  registerSight();
   game.keybindings.register(MODULE_ID, "toggleMap", {
     name: "BEAVERS_ACTION_HUD.keybindings.toggleMap",
     editable: [{ key: "KeyM" }],
@@ -38,6 +40,7 @@ Hooks.once("ready", () => {
   registerToasts();
   registerCombat();
   registerHud();
+  Hooks.on(HOOK_SIGHT, refreshSight);
   Hooks.on(HOOK_SETTINGS, () => {
     applyHud();
     requestDraw();

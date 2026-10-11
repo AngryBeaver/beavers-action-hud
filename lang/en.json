@@ -6,6 +6,8 @@
       "journal": "Journals",
       "chat": "Chat",
       "dice": "Roll dice",
+      "teamSightOn": "You see what the whole party sees. Click: only what your own character sees",
+      "teamSightOff": "You see what your own character sees. Click: what the whole party sees",
       "exit": "Leave the HUD",
       "restore": "Back to the HUD",
       "checks": "Abilities, saves and skills",
@@ -15,7 +17,8 @@
       "effects": "Effects",
       "switch": "click to play another character",
       "shortRest": "Short rest",
-      "longRest": "Long rest"
+      "longRest": "Long rest",
+      "remove": "Remove"
     },
     "dice": {
       "normal": "Normal",
@@ -27,13 +30,19 @@
       "empty": "The bar is empty. Drag spells, items or anything else from the lists below onto it.",
       "noCharacter": "No character. Ask your gamemaster to assign you one."
     },
+    "facts": {
+      "healing": "Healing"
+    },
     "drawer": {
       "active": "Active",
       "passive": "Passive",
       "empty": "Nothing here.",
       "sheet": "Open in the character sheet",
       "close": "Close",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "otherUses": "Other uses",
+      "upcast": "Upcast to this level",
+      "addCondition": "Add a condition"
     },
     "keybindings": {
       "toggleMap": "Open or close the map",
@@ -61,7 +70,19 @@
       },
       "chat": {
         "name": "Chat button",
-        "hint": "A button in the HUD that shows Foundry's chat for writing. Without it new messages still bubble up, and dice are rolled with the dice button."
+        "hint": "A button in the HUD that keeps the chat log open in the top right corner, to scroll back in it. Without it new messages still bubble up and fade."
+      },
+      "teamSightAllowed": {
+        "name": "Allow team sight",
+        "hint": "Players may see what the characters of all players see, not only their own: a player whose character waits in the dark can watch the others. Each player switches it with the eye button of the HUD. Off: everyone sees what Foundry shows them."
+      },
+      "teamSight": {
+        "name": "Team sight",
+        "hint": "See what the characters of all players see, not only your own. The eye button of the HUD switches the same. Only where the gamemaster allows it."
+      },
+      "chatInput": {
+        "name": "Write in the chat",
+        "hint": "With the chat log open, also show its input field and the choice of who reads the message (public, whisper to the gamemaster, ...). Off: the log is for reading, dice are rolled with the dice button."
       }
     },
     "checks": {

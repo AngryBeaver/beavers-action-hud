@@ -2,6 +2,9 @@
 
 export const MODULE_ID = "beavers-action-hud";
 
+/** Text as it is safe inside HTML, also inside an attribute. */
+export const esc = (text: unknown) => String(text ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
 export interface Point {
   x: number;
   y: number;
