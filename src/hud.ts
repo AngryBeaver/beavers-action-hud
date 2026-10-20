@@ -103,7 +103,8 @@ let slotKey: string | undefined;
 let addingCondition = false;
 /** The quick roll options stay as set, roll after roll. */
 let rollMode: RollMode = "normal";
-let rollBonus = 0;
+/** A number or a formula as typed: "2", "-1", "+2d6". */
+let rollBonus = "";
 /** Shown instead of the HUD after the user left it: the way back. */
 let pill: HTMLElement | undefined;
 /** What the buttons of the last render do, by their data-idx. */
@@ -174,9 +175,7 @@ function diceHtml(): string {
   return `<div class="bah-dice-options">
       <div class="bah-modes">${modes}</div>
       <label class="bah-bonus">${L("dice.bonus")}
-        <button type="button" data-action="roll-bonus" data-tab="-1" aria-label="-1">−</button>
-        <input type="number" step="1" value="${rollBonus}">
-        <button type="button" data-action="roll-bonus" data-tab="1" aria-label="+1">+</button>
+        <input type="text" value="${esc(rollBonus)}" placeholder="+2d6" spellcheck="false" autocomplete="off">
       </label>
     </div>
     <div class="bah-dice">${dice}</div>`;
@@ -541,22 +540,29 @@ function onClick(event: MouseEvent) {
       rollMode = tab as RollMode;
       refresh();
       break;
-    case "roll-bonus":
-      rollBonus += Number(tab);
-      refresh();
-      break;
     case "exit":
       toggleExit();
       break;
   }
 }
 
-/** The bonus typed into its field. */
+/**
+ * The bonus typed into its field. One that is no formula Foundry can roll is refused and the last one stays. No
+ * render: the field changes as it loses focus, on the press of a die, and a render would take that die away before
+ * its click.
+ */
 function onChange(event: Event) {
   const input = (event.target as HTMLElement).closest<HTMLInputElement>(".bah-bonus input");
   if (!input) return;
-  rollBonus = Math.trunc(Number(input.value)) || 0;
-  refresh();
+  const bonus = input.value.trim();
+  if (Roll.validate(diceFormula(20, "normal", bonus))) rollBonus = bonus;
+  else {
+    ui.notifications?.warn(game.i18n.format("BEAVERS_ACTION_HUD.dice.invalid", { bonus }));
+    input.value = rollBonus;
+  }
+  root?.querySelectorAll<HTMLElement>(".bah-die").forEach((die) => {
+    die.dataset.tooltip = diceFormula(Number(die.dataset.tab), rollMode, rollBonus);
+  });
 }
 
 /** Leave the HUD for Foundry's interface, or come back. Lasts for this browser tab. */

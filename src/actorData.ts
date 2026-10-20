@@ -478,6 +478,26 @@ function ammunitionOf(weapon: any): any {
 
 const QUIVER = 20;
 
+/**
+ * A spell with uses of its own that is cast with a slot too: Divine Smite of the 2024 paladin, cast once a day for
+ * free and with slots as often as there are. One of its activities takes a slot and not one of those uses.
+ */
+const alsoSlotted = (spell: any) =>
+  spell.type === "spell" &&
+  !!spell.system.uses?.max &&
+  !spell.system.linkedActivity &&
+  spell.system.level > 0 &&
+  spell.system.canScale !== false &&
+  [...(spell.system.activities ?? [])].some(
+    (a: any) => a.consumption?.spellSlot && !a.consumption.targets?.some((t: any) => t.type === "itemUses"),
+  );
+
+/** The free casts such a spell has left, "1 free". None left is no badge: "0/1" would read as not castable. */
+function freeBadge(spell: any): string | undefined {
+  const free = Number(spell.system.uses?.value) || 0;
+  return free > 0 ? game.i18n.format("BEAVERS_ACTION_HUD.drawer.free", { count: free }) : undefined;
+}
+
 function badgeOf(item: any): string | undefined {
   const properties = item.type === "weapon" ? item.system.properties : undefined;
   // A weapon that needs ammunition is as good as the ammunition left for it: of a full quiver of 20, more is not shown
@@ -485,6 +505,9 @@ function badgeOf(item: any): string | undefined {
     return `${Math.min(QUIVER, Math.max(0, Number(ammunitionOf(item)?.system.quantity) || 0))}/${QUIVER}`;
   }
   const own = item.system.uses;
+  // With the free casts used up the slots are what is left to cast it with
+  if (alsoSlotted(item))
+    return freeBadge(item) ?? (spellSlotBadge(item.actor?.system.spells, item.system.level) || undefined);
   if (own?.max) return `${own.value}/${own.max}`;
   // A spell another item grants (a wand, a staff, a feature) is cast with what that item's cast activity uses up:
   // the uses of the activity or of the item. Only if the activity says so it takes a spell slot.
@@ -672,7 +695,7 @@ export function spellGroups(actor: any, only?: number): Group[] {
   const levelOf = (spell: any) => Number(spell.system.level) || 0;
   const slots = slotGlobes(actor.system.spells);
   const badge = (level: number) => (level > 0 ? spellSlotBadge(actor.system.spells, level) : "");
-  const slotted = (spell: any) => (badgeOf(spell) ?? "") === badge(levelOf(spell));
+  const slotted = (spell: any) => (badgeOf(spell) ?? "") === badge(levelOf(spell)) || alsoSlotted(spell);
   const scalable = spells.filter((s) => levelOf(s) > 0 && s.system.canScale !== false && slotted(s));
   const upcast = (level: number) =>
     slots.some((g) => g.level === level)
@@ -695,7 +718,10 @@ export function spellGroups(actor: any, only?: number): Group[] {
           label: CONFIG.DND5E.spellLevels?.[level] ?? String(level),
           note: badge(level) || undefined,
           tags,
-          entries: own.filter(slotted).map((s) => ({ ...itemEntry(s), badge: undefined })),
+          // A spell with uses of its own besides the slots still shows how many are left
+          entries: own
+            .filter(slotted)
+            .map((s) => ({ ...itemEntry(s), badge: alsoSlotted(s) ? freeBadge(s) : undefined })),
         },
       ];
       const others = own.filter((s) => !slotted(s));

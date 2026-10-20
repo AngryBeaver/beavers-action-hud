@@ -119,6 +119,20 @@ describe("diceFormula", () => {
     expect(diceFormula(6, "normal", NaN)).toBe("1d6");
     expect(diceFormula(6, "normal", 1.9)).toBe("1d6 + 1");
   });
+
+  it("takes a typed bonus, dice included", () => {
+    expect(diceFormula(20, "normal", "+2d6")).toBe("1d20 + 2d6");
+    expect(diceFormula(20, "normal", "2d6")).toBe("1d20 + 2d6");
+    expect(diceFormula(20, "advantage", " -1 ")).toBe("2d20kh - 1");
+    expect(diceFormula(8, "normal", "1d4 + 2")).toBe("1d8 + 1d4 + 2");
+    expect(diceFormula(8, "normal", "3")).toBe("1d8 + 3");
+  });
+
+  it("ignores an empty or zero bonus", () => {
+    expect(diceFormula(6, "normal", "")).toBe("1d6");
+    expect(diceFormula(6, "normal", "  ")).toBe("1d6");
+    expect(diceFormula(6, "normal", "+0")).toBe("1d6");
+  });
 });
 
 describe("placeInBar", () => {

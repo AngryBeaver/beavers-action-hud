@@ -56,7 +56,7 @@ The Idea is from oldschool computer games like Diablo: globes, an action bar, a 
   own **notes**: a journal named after the user that only they own, created with the first click. Where players
   may not create journals the gamemaster's client does it, so a gamemaster has to be online that first time.
 - **Quick dice**: d4, d6, d8, d10, d12, d20 and d100. Pick normal, advantage or disadvantage and a bonus once, then
-  every click on a die rolls it. Nobody has to type into the chat, and the chat button can be switched off in the
+  every click on a die rolls it. The bonus is a number or dice, like 2, -1 or +2d6. Nobody has to type into the chat, and the chat button can be switched off in the
   settings.
 - **Chat**, top right: the newest three messages as bubbles, each fading a few seconds after it came in. Hover
   keeps one. The chat button keeps Foundry's chat log open in the upper half of that side instead, to scroll back

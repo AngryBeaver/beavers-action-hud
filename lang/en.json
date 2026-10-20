@@ -24,7 +24,8 @@
       "normal": "Normal",
       "advantage": "Advantage",
       "disadvantage": "Disadvantage",
-      "bonus": "Bonus"
+      "bonus": "Bonus",
+      "invalid": "\"{bonus}\" is no bonus that can be rolled. Type a number or dice, like 2, -1 or +2d6."
     },
     "bar": {
       "empty": "The bar is empty. Drag spells, items or anything else from the lists below onto it.",
@@ -41,6 +42,7 @@
       "close": "Close",
       "inactive": "Inactive",
       "otherUses": "Other uses",
+      "free": "{count} free",
       "upcast": "Upcast to this level",
       "addCondition": "Add a condition"
     },

@@ -57,6 +57,24 @@ async function onCreate(message: any) {
   toast.addEventListener("pointerleave", () => schedule(toast));
   target.append(toast);
   while (target.children.length > MAX) remove(target.firstElementChild as HTMLElement);
+  // Already revealed while the message was rendered: nothing to wait for
+  if (!message._dice3dMessageHidden) reveal(toast);
+  schedule(toast);
+}
+
+/**
+ * Dice So Nice hides a roll until its dice have landed, then shows it again, but only in the chat log, its popout
+ * and Foundry's notifications. Its copy here would stay an empty border.
+ */
+function reveal(toast: HTMLElement) {
+  toast.querySelectorAll(".dsn-hide").forEach((el) => el.classList.remove("dsn-hide"));
+}
+
+function onRollComplete(messageId: string) {
+  const toast = container?.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
+  if (!toast) return;
+  reveal(toast);
+  // The time to read it starts now that there is something to read
   schedule(toast);
 }
 
@@ -68,4 +86,5 @@ function onDelete(message: any) {
 export function registerToasts() {
   Hooks.on("createChatMessage", (message: any) => void onCreate(message));
   Hooks.on("deleteChatMessage", onDelete);
+  Hooks.on("diceSoNiceRollComplete", onRollComplete);
 }

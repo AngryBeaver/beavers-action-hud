@@ -536,8 +536,7 @@ body.bah-map #beavers-action-hud .bah-frame {
   display: flex;
 }
 
-#beavers-action-hud .bah-mode,
-#beavers-action-hud .bah-bonus button {
+#beavers-action-hud .bah-mode {
   padding: 6px 10px;
   font-size: 13px;
   background: #0d0b08;
@@ -566,7 +565,7 @@ body.bah-map #beavers-action-hud .bah-frame {
 }
 
 #beavers-action-hud .bah-bonus input {
-  width: 52px;
+  width: 96px;
   height: 28px;
   text-align: center;
   color: var(--bah-text);
@@ -998,11 +997,18 @@ body.bah-map #beavers-action-hud .bah-combat {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.8);
 }
 
+/* one row each, the pictures one below the other: Foundry's buttons would center them and fix their height */
 #beavers-action-hud .bah-picker button {
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  margin: 0;
   display: flex;
+  justify-content: flex-start;
   align-items: center;
   gap: 8px;
   padding: 3px 8px 3px 3px;
+  text-align: left;
   font-size: 13px;
   white-space: nowrap;
   background: rgba(0, 0, 0, 0.35);
@@ -1014,9 +1020,17 @@ body.bah-map #beavers-action-hud .bah-combat {
   border-color: var(--bah-gold);
 }
 
+#beavers-action-hud .bah-picker span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 #beavers-action-hud .bah-picker img {
+  flex: none;
   width: 34px;
   height: 34px;
+  margin: 0;
   border: 1px solid var(--bah-gold-dim);
   border-radius: 50%;
   object-fit: cover;
@@ -1172,14 +1186,19 @@ body.bah-hud:not(.bah-map) #combat-popout {
   border-radius: 50%;
 }
 
+/* as high as the bar, the buttons at its bottom: level with its tabs */
 #beavers-action-hud .bah-plate-side {
+  align-self: stretch;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding-block: 2px 4px;
 }
 
 #beavers-action-hud .bah-plate .bah-stats {
+  flex: 1;
   flex-direction: row;
+  align-items: center;
   gap: 12px;
 }
 
@@ -1207,10 +1226,6 @@ body.bah-hud:not(.bah-map) #combat-popout {
 #beavers-action-hud .bah-plate-buttons button:hover {
   border-color: var(--bah-gold);
   box-shadow: 0 0 8px var(--bah-gold);
-}
-
-#beavers-action-hud .bah-plate-buttons i {
-  color: var(--bah-gold);
 }
 
 /* ---------- one mana globe, the ring around it are the slot levels ---------- */

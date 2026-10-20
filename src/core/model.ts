@@ -78,12 +78,23 @@ export type RollMode = "normal" | "advantage" | "disadvantage";
 
 /**
  * The formula of a quick roll: one die, or two keeping the higher (advantage) or lower (disadvantage), plus or minus
- * a bonus.
+ * a bonus. The bonus is a number or a formula as typed, "2", "-1", "+2d6" or "1d4 + 2"; without a sign it is added.
  */
-export function diceFormula(faces: number, mode: RollMode = "normal", bonus = 0): string {
+export function diceFormula(faces: number, mode: RollMode = "normal", bonus: string | number = ""): string {
   const die = mode === "advantage" ? `2d${faces}kh` : mode === "disadvantage" ? `2d${faces}kl` : `1d${faces}`;
-  const b = Math.trunc(Number(bonus)) || 0;
-  return b ? `${die} ${b > 0 ? "+" : "-"} ${Math.abs(b)}` : die;
+  const b = normalBonus(bonus);
+  return b ? `${die} ${b[0]} ${b.slice(1).trim()}` : die;
+}
+
+/** A bonus as it goes into the formula: signed, "+ 2d6" or "- 1", or empty when there is none. */
+function normalBonus(bonus: string | number): string {
+  if (typeof bonus === "number") {
+    const b = Math.trunc(bonus) || 0;
+    return b ? `${b > 0 ? "+" : "-"} ${Math.abs(b)}` : "";
+  }
+  const b = bonus.trim().replace(/\s+/g, " ");
+  if (!b || /^[+-]?\s*0*$/.test(b)) return "";
+  return /^[+-]/.test(b) ? `${b[0]} ${b.slice(1).trim()}` : `+ ${b}`;
 }
 
 /** What a button of the bar stands for, like a favorite of the dnd5e sheet: an item, an effect, a skill, ... */
