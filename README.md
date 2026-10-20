@@ -6,7 +6,6 @@ The Idea is from oldschool computer games like Diablo: globes, an action bar, a 
 <img width="1564" height="899" alt="image" src="https://github.com/user-attachments/assets/ce912f16-c8d4-4663-9d71-674830a5d1a5" />
 
 ## Features
-
 - **The view follows the character.** The canvas stays centered on the player's token, also while it moves. Zoom
   stays free.
 - **Round minimap**, top left: the whole scene with a pin where the character stands. It shows only what the player
