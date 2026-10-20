@@ -33,7 +33,7 @@
         "compatibility": {
           "minimum": "5.0.0",
           "verified": "6"
-        },
+        }
       }
     ]
   }
